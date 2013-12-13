@@ -1,6 +1,7 @@
 package com.tinkerpop.gremlin.server;
 
 import com.tinkerpop.blueprints.Graph;
+import com.tinkerpop.blueprints.tinkergraph.TinkerFactory;
 import com.tinkerpop.blueprints.util.GraphFactory;
 import com.tinkerpop.gremlin.server.util.MetricManager;
 import io.netty.bootstrap.ServerBootstrap;
@@ -150,6 +151,11 @@ public class GremlinServer {
                     if (logger.isDebugEnabled() && re.getCause() != null) logger.debug("GraphFactory exception", re.getCause());
                 }
             });
+
+            // TODO: Revert this before merging with main
+            System.out.println("Initializing tinkergraph classic");
+            m.put("tg", TinkerFactory.createClassic());
+
             graphs = Collections.unmodifiableMap(m);
         }
 
