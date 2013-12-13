@@ -4,6 +4,7 @@ import com.tinkerpop.blueprints.Direction;
 import com.tinkerpop.blueprints.Edge;
 import com.tinkerpop.blueprints.Element;
 import com.tinkerpop.blueprints.Vertex;
+import com.tinkerpop.gremlin.pipes.util.Holder;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -94,6 +95,8 @@ public interface ResultSerializer {
         private Object prepareOutput(final Object object) throws Exception {
             if (object == null)
                 return JSONObject.NULL;
+            else if (object instanceof Holder)
+                return prepareOutput(((Holder)object).get());
             else if (object instanceof com.tinkerpop.blueprints.Vertex.Property) {
                 final Vertex.Property t = (Vertex.Property) object;
                 final JSONObject jsonObject = new JSONObject();
