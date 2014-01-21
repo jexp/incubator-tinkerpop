@@ -1,13 +1,16 @@
 package com.tinkerpop.gremlin.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.tinkerpop.gremlin.pipes.Gremlin;
-import com.tinkerpop.gremlin.pipes.GremlinPipeline;
-import com.tinkerpop.gremlin.pipes.Pipeline;
+import com.tinkerpop.gremlin.Gremlin;
+import com.tinkerpop.gremlin.Pipe;
+import com.tinkerpop.gremlin.Pipeline;
+import com.tinkerpop.gremlin.oltp.map.IdentityPipe;
+import com.tinkerpop.gremlin.util.HolderIterator;
 
 import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.Collections;
+import java.util.Iterator;
 import java.util.Locale;
 import java.util.Map;
 
@@ -301,28 +304,35 @@ public class GremlinBuilder {
     // TODO: See if methods like submit(), pre(), post() are needed
 
     // METHODS TO EVALUATE THE QUERY
-    public GremlinPipeline submit(GremlinClient executor, Map<String, Object> bindings) {
-        return new Gremlin(executor.eval(getGraph(), bindings, query));
+    public Pipeline submit(GremlinClient executor, Map<String, Object> bindings) {
+        return pipeline(executor.eval(getGraph(), bindings, query));
     }
 
-    public GremlinPipeline submit(GremlinClient executor, Map<String, Object> bindings, Class itemClass) {
-        return new Gremlin(executor.eval(getGraph(), bindings, query, itemClass));
+    public Pipeline submit(GremlinClient executor, Map<String, Object> bindings, Class itemClass) {
+        return pipeline(executor.eval(getGraph(), bindings, query, itemClass));
     }
 
-    public GremlinPipeline submit(GremlinClient executor, Map<String, Object> bindings, TypeReference itemType) {
-        return new Gremlin(executor.eval(getGraph(), bindings, query, itemType));
+    public Pipeline submit(GremlinClient executor, Map<String, Object> bindings, TypeReference itemType) {
+        return pipeline(executor.eval(getGraph(), bindings, query, itemType));
+    }
+
+    private Pipeline pipeline(Iterator<Object> starts) {
+        Pipeline ans = Gremlin.of();
+        Pipe pipe = new IdentityPipe(ans);
+        pipe.addStarts(new HolderIterator(pipe, starts, false));
+        return ans.addPipe(pipe);
     }
 
     // Methods without bindings
-    public GremlinPipeline submit(GremlinClient executor) {
-        return new Gremlin(executor.eval(getGraph(), Collections.emptyMap(), query));
+    public Pipeline submit(GremlinClient executor) {
+        return pipeline(executor.eval(getGraph(), Collections.emptyMap(), query));
     }
 
-    public GremlinPipeline submit(GremlinClient executor, Class itemClass) {
-        return new Gremlin(executor.eval(getGraph(), Collections.emptyMap(), query, itemClass));
+    public Pipeline submit(GremlinClient executor, Class itemClass) {
+        return pipeline(executor.eval(getGraph(), Collections.emptyMap(), query, itemClass));
     }
 
-    public GremlinPipeline submit(GremlinClient executor, TypeReference itemType) {
-        return new Gremlin(executor.eval(getGraph(), Collections.emptyMap(), query, itemType));
+    public Pipeline submit(GremlinClient executor, TypeReference itemType) {
+        return pipeline(executor.eval(getGraph(), Collections.emptyMap(), query, itemType));
     }
 }

@@ -6,7 +6,6 @@ import com.tinkerpop.gremlin.client.GremlinClient;
 import com.tinkerpop.gremlin.client.GremlinClientErrorCodes;
 import com.tinkerpop.gremlin.client.GremlinClientException;
 import com.tinkerpop.gremlin.client.json.GremlinServerResponse;
-import com.tinkerpop.gremlin.pipes.util.Holder;
 
 import javax.script.Bindings;
 import javax.script.ScriptEngine;
@@ -56,24 +55,7 @@ public class LocalGremlinClient implements GremlinClient {
                 output.add(resultObj);
             }
 
-            final Iterator<Object> outputIter = output.iterator();
-
-            return new Iterator<Object>() {
-                @Override
-                public boolean hasNext() {
-                    return outputIter.hasNext();
-                }
-
-                @Override
-                public Object next() {
-                    Object ans = outputIter.next();
-                    if (ans instanceof Holder) {
-                        return ((Holder)ans).get();
-                    } else {
-                        return ans;
-                    }
-                }
-            };
+            return output.iterator();
         } catch (GremlinClientException gce) {
             throw gce;
         } catch (ScriptException se) {

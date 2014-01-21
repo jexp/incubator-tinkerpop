@@ -4,8 +4,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.tinkerpop.gremlin.client.GremlinClientErrorCodes;
 import com.tinkerpop.gremlin.client.GremlinClientException;
 import com.tinkerpop.gremlin.server.RequestMessage;
-import com.tinkerpop.gremlin.server.ServerTokens;
+import com.tinkerpop.gremlin.server.Tokens;
 
+import com.tinkerpop.gremlin.server.util.ser.JsonMessageSerializerV1d0;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
@@ -32,9 +33,11 @@ import java.util.concurrent.TimeUnit;
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
 public class WebSocketConnection {
+    private static final EventLoopGroup group = new NioEventLoopGroup();
+    private static RequestMessage.Builder builder = new RequestMessage.Builder(Tokens.OPS_EVAL);
+    private static JsonMessageSerializerV1d0 serializer = new JsonMessageSerializerV1d0();
     private final URI uri;
     private Channel ch;
-    private static final EventLoopGroup group = new NioEventLoopGroup();
 
     protected static ConcurrentHashMap<UUID, ArrayBlockingQueue<Optional<JsonNode>>> responses = new ConcurrentHashMap<>();
 
@@ -104,24 +107,18 @@ public class WebSocketConnection {
     }
 
     public Iterator<JsonNode> eval(final String gremlin) throws GremlinClientException {
-        final RequestMessage msg = new RequestMessage(ServerTokens.OPS_EVAL);
+        final RequestMessage msg = builder.build();
         msg.requestId = UUID.randomUUID();
         msg.args = new HashMap<String, Object>() {{
-            put(ServerTokens.ARGS_GREMLIN, gremlin);
-            put(ServerTokens.ARGS_ACCEPT, "application/json");
+            put(Tokens.ARGS_GREMLIN, gremlin);
+            put(Tokens.ARGS_ACCEPT, "application/json");
         }};
 
         final ArrayBlockingQueue<Optional<JsonNode>> responseQueue = new ArrayBlockingQueue<>(256);
         final UUID requestId = msg.requestId;
         responses.put(requestId, responseQueue);
 
-        String textFrame;
-        try {
-            textFrame = RequestMessage.Serializer.json(msg);
-        } catch (IOException e) {
-            throw new GremlinClientException(GremlinClientErrorCodes.REQUEST_SERIALIZATION_ERROR, "WebSocketConnection could not serialize: " + msg);
-        }
-
+        String textFrame = serializer.serialize(msg);
         ch.writeAndFlush(new TextWebSocketFrame(textFrame));
         //System.out.println("Sending: " + textFrame);
 

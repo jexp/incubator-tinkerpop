@@ -10,7 +10,6 @@ import com.tinkerpop.gremlin.client.executor.WebSocketClient;
 import com.tinkerpop.gremlin.client.json.RemoteVertex;
 import com.tinkerpop.gremlin.client.json.ValueHolder;
 import com.tinkerpop.gremlin.groovy.jsr223.GremlinGroovyScriptEngineFactory;
-import com.tinkerpop.gremlin.pipes.util.Holder;
 import org.junit.Test;
 
 import java.util.HashMap;
@@ -88,7 +87,7 @@ public class GremlinBuilderTest {
         assertEquals(1,
                 GremlinBuilder.of("g").V().has("name", "marko").submit(executor, new HashMap<String, Object>()).count());
         assertEquals(29,
-                ((Holder) GremlinBuilder.of("g").V().has("name", "marko").value("age").submit(executor, new HashMap<String, Object>()).next()).get());
+                GremlinBuilder.of("g").V().has("name", "marko").value("age").submit(executor, new HashMap<String, Object>()).next());
     }
 
     @Test
@@ -101,7 +100,7 @@ public class GremlinBuilderTest {
         assertEquals(1,
                 GremlinBuilder.of("g").V().has("name", "marko").submit(executor, new HashMap<String, Object>()).count());
         assertEquals(29,
-                ((Holder) GremlinBuilder.of("g").V().has("name", "marko").value("age").submit(executor, new HashMap<String, Object>(), Integer.class).next()).get());
+                GremlinBuilder.of("g").V().has("name", "marko").value("age").submit(executor, new HashMap<String, Object>(), Integer.class).next());
     }
 
     @Test
@@ -121,20 +120,20 @@ public class GremlinBuilderTest {
                 GremlinBuilder.of("tg").V().has("name", "marko").submit(executor).count());
 
         assertEquals(29,
-                ((Holder) GremlinBuilder.of("tg").V().has("name", "marko").value("age").submit(executor, Integer.class).next()).get());
+                GremlinBuilder.of("tg").V().has("name", "marko").value("age").submit(executor, Integer.class).next());
 
-        Vertex marko = (Vertex) ((Holder) (GremlinBuilder.of("tg").V().has("name", "marko").submit(executor).next())).get();
-        assertEquals(29, marko.getProperty("age").getValue());
+        Vertex marko = (Vertex) GremlinBuilder.of("tg").V().has("name", "marko").submit(executor).next();
+        assertEquals(29, marko.getProperty("age").get());
 
-        Vertex lop = (Vertex) ((Holder) (GremlinBuilder.of("tg").V().has("name", "marko").out("created").submit(executor).next())).get();
-        assertEquals("lop", lop.getProperty("name").getValue());
+        Vertex lop = (Vertex) GremlinBuilder.of("tg").V().has("name", "marko").out("created").submit(executor).next();
+        assertEquals("lop", lop.getProperty("name").get());
 
         // TODO: Implement de-serialization class for properties
 //        ValueHolder markoName = (ValueHolder) ((Holder) (GremlinBuilder.of("tg").V().has("name", "josh").in("knows").property("name").submit(executor, ValueHolder.class).next())).get();
 //        assertEquals("marko", markoName.get());
-        marko = (Vertex) ((Holder) (GremlinBuilder.of("tg").V().has("name", "josh").in("knows").submit(executor, RemoteVertex.class).next())).get();
-        assertEquals("marko", marko.getProperty("name").getValue());
-        assertEquals(29, marko.getProperty("age").getValue());
+        marko = (Vertex) GremlinBuilder.of("tg").V().has("name", "josh").in("knows").submit(executor, RemoteVertex.class).next();
+        assertEquals("marko", marko.getProperty("name").get());
+        assertEquals(29, marko.getProperty("age").get());
 
         executor.close();
     }

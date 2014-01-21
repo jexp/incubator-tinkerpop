@@ -88,9 +88,9 @@ public class LocalGremlinClientWithSerialization extends RemoteGremlinClient imp
             // Use the ResultSerializer to generate the result JSON
             return new ResultSerializer.JsonResultSerializer().serialize(result, ResultCode.SUCCESS, null);
         } catch (GremlinClientException e) {
-            ResultCode failCode = ResultCode.FAIL;
+            ResultCode failCode = ResultCode.SERVER_ERROR;
             if (e.getErrorCode() == GremlinClientErrorCodes.REQUEST_DESERIALIZATION_ERROR) {
-                failCode = ResultCode.FAIL_MALFORMED_REQUEST;
+                failCode = ResultCode.REQUEST_ERROR_MALFORMED_REQUEST;
             }
 
             // TODO: Separate results, error details and stack trace
