@@ -21,16 +21,16 @@ import static org.junit.Assert.*;
  */
 public abstract class DedupRangeTest extends AbstractGremlinTest {
 
-    public abstract Traversal<Vertex, String> get_first_3_distinct_artists_following_Hunter();
+    public abstract Traversal<Vertex, String> get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX0_2X_valueXnameX();
 
-    public abstract Traversal<Vertex, String> get_next_3_distinct_artists_following_Hunter();
+    public abstract Traversal<Vertex, String> get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX3_5X_valueXnameX();
 
-    public abstract Traversal<Vertex, String> get_first_6_distinct_artists_by_first_name_following_Hunter();
+    public abstract Traversal<Vertex, String> get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupXname_split_0_0_5X_valueXnameX();
 
     @Test
     @LoadGraphWith(GRATEFUL)
-    public void first_3_distinct_artists_following_Hunter() {
-        final Iterator<String> traversal = get_first_3_distinct_artists_following_Hunter();
+    public void g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX0_2X_valueXnameX() {
+        final Iterator<String> traversal = get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX0_2X_valueXnameX();
         System.out.println("Testing: " + traversal);
         final List<String> names = StreamFactory.stream(traversal).collect(Collectors.toList());
         assertEquals(3, names.size());
@@ -42,8 +42,8 @@ public abstract class DedupRangeTest extends AbstractGremlinTest {
 
     @Test
     @LoadGraphWith(GRATEFUL)
-    public void next_3_distinct_artists_following_Hunter() {
-        final Iterator<String> traversal = get_next_3_distinct_artists_following_Hunter();
+    public void g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX3_5X_valueXnameX() {
+        final Iterator<String> traversal = get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX3_5X_valueXnameX();
         System.out.println("Testing: " + traversal);
         final List<String> names = StreamFactory.stream(traversal).collect(Collectors.toList());
         assertEquals(3, names.size());
@@ -55,8 +55,8 @@ public abstract class DedupRangeTest extends AbstractGremlinTest {
 
     @Test
     @LoadGraphWith(GRATEFUL)
-    public void first_6_distinct_artists_by_first_name_following_Hunter() {
-        final Iterator<String> traversal = get_first_6_distinct_artists_by_first_name_following_Hunter();
+    public void g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupXname_split_0_0_5X_valueXnameX() {
+        final Iterator<String> traversal = get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupXname_split_0_0_5X_valueXnameX();
         System.out.println("Testing: " + traversal);
         final List<String> names = StreamFactory.stream(traversal).collect(Collectors.toList());
         assertEquals(5, names.size());
@@ -70,16 +70,16 @@ public abstract class DedupRangeTest extends AbstractGremlinTest {
 
     public static class JavaDedupRangeTest extends DedupRangeTest {
 
-        public Traversal<Vertex, String> get_first_3_distinct_artists_following_Hunter() {
-            return g.V().has("name","Hunter").in("sung_by").out("followed_by").out("sung_by").dedup(0, 2).value("name");
+        public Traversal<Vertex, String> get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX0_2X_valueXnameX() {
+            return g.v(339).in("sung_by").out("followed_by").out("sung_by").dedup(0, 2).value("name");
         }
 
-        public Traversal<Vertex, String> get_next_3_distinct_artists_following_Hunter() {
-            return g.V().has("name","Hunter").in("sung_by").out("followed_by").out("sung_by").dedup(3, 5).value("name");
+        public Traversal<Vertex, String> get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupX3_5X_valueXnameX() {
+            return g.v(339).in("sung_by").out("followed_by").out("sung_by").dedup(3, 5).value("name");
         }
 
-        public Traversal<Vertex, String> get_first_6_distinct_artists_by_first_name_following_Hunter() {
-            return g.V().has("name","Hunter").in("sung_by").out("followed_by").out("sung_by").dedup(v ->
+        public Traversal<Vertex, String> get_g_v339_inXsung_byX_outXfollowed_byX_outXsung_byX_dedupXname_split_0_0_5X_valueXnameX() {
+            return g.v(339).in("sung_by").out("followed_by").out("sung_by").dedup(v ->
                     v.getProperty("name").get().toString().split("_")[0], 0, 5).value("name");
         }
     }
