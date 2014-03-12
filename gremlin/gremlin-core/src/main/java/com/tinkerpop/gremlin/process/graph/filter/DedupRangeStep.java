@@ -33,7 +33,7 @@ public class DedupRangeStep<S> extends FilterStep<S> {
                 final int c = counter.get() + 1;
                 if (c > high && high != -1)
                     throw FastNoSuchElementException.instance();
-                return c >= low && (high == -1 || c <= high) && set.add(holder.get()) && counter.incrementAndGet() >= 0;
+                return set.add(holder.get()) && counter.incrementAndGet() >= 0 && c >= low && (high == -1 || c <= high);
             });
         }
         else {
@@ -42,7 +42,7 @@ public class DedupRangeStep<S> extends FilterStep<S> {
                 if (c > high && high != -1)
                     throw FastNoSuchElementException.instance();
                 final Object value = uniqueFunction.apply(holder.get());
-                return c >= low && (high == -1 || c <= high) && set.add(value) && counter.incrementAndGet() >= 0;
+                return set.add(value) && counter.incrementAndGet() >= 0 && c >= low && (high == -1 || c <= high);
             });
         }
     }

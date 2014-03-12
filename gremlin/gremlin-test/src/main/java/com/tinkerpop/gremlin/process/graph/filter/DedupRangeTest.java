@@ -11,55 +11,76 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static com.tinkerpop.gremlin.LoadGraphWith.GraphData.CLASSIC;
+import static com.tinkerpop.gremlin.LoadGraphWith.GraphData.GRATEFUL;
 import static org.junit.Assert.*;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  * @author Stephen Mallette (http://stephen.genoprime.com)
+ * @author Daniel Kuppitz (daniel at thinkaurelius.com)
  */
 public abstract class DedupRangeTest extends AbstractGremlinTest {
 
-    public abstract Traversal<Vertex, String> get_g_V_both_dedup_0_3_name();
+    public abstract Traversal<Vertex, String> get_first_3_distinct_artists_following_Hunter();
 
-    public abstract Traversal<Vertex, String> get_g_V_both_dedupXlangX_0_0_name();
+    public abstract Traversal<Vertex, String> get_next_3_distinct_artists_following_Hunter();
+
+    public abstract Traversal<Vertex, String> get_first_6_distinct_artists_by_first_name_following_Hunter();
 
     @Test
-    @LoadGraphWith(CLASSIC)
-    public void g_V_both_dedup_0_3_name() {
-        final Iterator<String> traversal = get_g_V_both_dedup_0_3_name();
+    @LoadGraphWith(GRATEFUL)
+    public void first_3_distinct_artists_following_Hunter() {
+        final Iterator<String> traversal = get_first_3_distinct_artists_following_Hunter();
         System.out.println("Testing: " + traversal);
         final List<String> names = StreamFactory.stream(traversal).collect(Collectors.toList());
-        assertEquals(4, names.size());
-        final int matches = (names.contains("marko") ? 1 : 0) +
-                (names.contains("vadas") ? 1 : 0) +
-                (names.contains("lop") ? 1 : 0) +
-                (names.contains("josh") ? 1 : 0) +
-                (names.contains("ripple") ? 1 : 0) +
-                (names.contains("peter") ? 1 : 0);
-        assertEquals(4, matches);
+        assertEquals(3, names.size());
+        assertTrue(names.contains("Weir"));
+        assertTrue(names.contains("Donna_Godchaux"));
+        assertTrue(names.contains("Garcia"));
         assertFalse(traversal.hasNext());
     }
 
     @Test
-    @LoadGraphWith(CLASSIC)
-    public void g_V_both_dedupXlangX_0_0_name() {
-        final Iterator<String> traversal = get_g_V_both_dedupXlangX_0_0_name();
+    @LoadGraphWith(GRATEFUL)
+    public void next_3_distinct_artists_following_Hunter() {
+        final Iterator<String> traversal = get_next_3_distinct_artists_following_Hunter();
         System.out.println("Testing: " + traversal);
         final List<String> names = StreamFactory.stream(traversal).collect(Collectors.toList());
-        assertEquals(1, names.size());
-        assertTrue(names.contains("marko") || names.contains("peter") || names.contains("josh") || names.contains("vadas") || names.contains("lop") || names.contains("ripple"));
+        assertEquals(3, names.size());
+        assertTrue(names.contains("Lesh"));
+        assertTrue(names.contains("Weir_Hart"));
+        assertTrue(names.contains("Garcia_Lesh"));
+        assertFalse(traversal.hasNext());
+    }
+
+    @Test
+    @LoadGraphWith(GRATEFUL)
+    public void first_6_distinct_artists_by_first_name_following_Hunter() {
+        final Iterator<String> traversal = get_first_6_distinct_artists_by_first_name_following_Hunter();
+        System.out.println("Testing: " + traversal);
+        final List<String> names = StreamFactory.stream(traversal).collect(Collectors.toList());
+        assertEquals(5, names.size());
+        assertTrue(names.contains("Weir"));
+        assertTrue(names.contains("Donna_Godchaux"));
+        assertTrue(names.contains("Garcia"));
+        assertTrue(names.contains("Lesh"));
+        assertTrue(names.contains("Pigpen_Weir"));
         assertFalse(traversal.hasNext());
     }
 
     public static class JavaDedupRangeTest extends DedupRangeTest {
 
-        public Traversal<Vertex, String> get_g_V_both_dedup_0_3_name() {
-            return g.V().both().dedup(0, 3).value("name");
+        public Traversal<Vertex, String> get_first_3_distinct_artists_following_Hunter() {
+            return g.V().has("name","Hunter").in("sung_by").out("followed_by").out("sung_by").dedup(0, 2).value("name");
         }
 
-        public Traversal<Vertex, String> get_g_V_both_dedupXlangX_0_0_name() {
-            return g.V().both().dedup(v -> v.getProperty("lang").orElse(null), 0, 0).value("name");
+        public Traversal<Vertex, String> get_next_3_distinct_artists_following_Hunter() {
+            return g.V().has("name","Hunter").in("sung_by").out("followed_by").out("sung_by").dedup(3, 5).value("name");
+        }
+
+        public Traversal<Vertex, String> get_first_6_distinct_artists_by_first_name_following_Hunter() {
+            return g.V().has("name","Hunter").in("sung_by").out("followed_by").out("sung_by").dedup(v ->
+                    v.getProperty("name").get().toString().split("_")[0], 0, 5).value("name");
         }
     }
 }
