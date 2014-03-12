@@ -1,15 +1,7 @@
 package com.tinkerpop.gremlin.process;
 
 import com.tinkerpop.gremlin.AbstractGremlinSuite;
-import com.tinkerpop.gremlin.process.graph.filter.CyclicPathTest;
-import com.tinkerpop.gremlin.process.graph.filter.DedupTest;
-import com.tinkerpop.gremlin.process.graph.filter.ExceptTest;
-import com.tinkerpop.gremlin.process.graph.filter.FilterTest;
-import com.tinkerpop.gremlin.process.graph.filter.HasTest;
-import com.tinkerpop.gremlin.process.graph.filter.IntervalTest;
-import com.tinkerpop.gremlin.process.graph.filter.RangeTest;
-import com.tinkerpop.gremlin.process.graph.filter.RetainTest;
-import com.tinkerpop.gremlin.process.graph.filter.SimplePathTest;
+import com.tinkerpop.gremlin.process.graph.filter.*;
 import com.tinkerpop.gremlin.process.graph.map.AnnotatedValuesTest;
 import com.tinkerpop.gremlin.process.graph.map.BackTest;
 import com.tinkerpop.gremlin.process.graph.map.JumpTest;
@@ -56,6 +48,7 @@ public class ProcessStandardSuite extends AbstractGremlinSuite {
     private static final Class<?>[] testsToExecute = new Class<?>[]{
             CyclicPathTest.JavaCyclicPathTest.class,
             DedupTest.JavaDedupTest.class,
+            DedupRangeTest.JavaDedupRangeTest.class,
             ExceptTest.JavaExceptTest.class,
             FilterTest.JavaFilterTest.class,
             HasTest.JavaHasTest.class,

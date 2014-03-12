@@ -6,16 +6,7 @@ import com.tinkerpop.gremlin.process.Step;
 import com.tinkerpop.gremlin.process.T;
 import com.tinkerpop.gremlin.process.Traversal;
 import com.tinkerpop.gremlin.process.computer.ranking.PageRankStep;
-import com.tinkerpop.gremlin.process.graph.filter.CyclicPathStep;
-import com.tinkerpop.gremlin.process.graph.filter.DedupStep;
-import com.tinkerpop.gremlin.process.graph.filter.ExceptStep;
-import com.tinkerpop.gremlin.process.graph.filter.FilterStep;
-import com.tinkerpop.gremlin.process.graph.filter.HasAnnotationStep;
-import com.tinkerpop.gremlin.process.graph.filter.HasStep;
-import com.tinkerpop.gremlin.process.graph.filter.IntervalStep;
-import com.tinkerpop.gremlin.process.graph.filter.RangeStep;
-import com.tinkerpop.gremlin.process.graph.filter.RetainStep;
-import com.tinkerpop.gremlin.process.graph.filter.SimplePathStep;
+import com.tinkerpop.gremlin.process.graph.filter.*;
 import com.tinkerpop.gremlin.process.graph.map.AnnotatedValueStep;
 import com.tinkerpop.gremlin.process.graph.map.AnnotationValueStep;
 import com.tinkerpop.gremlin.process.graph.map.AnnotationValuesStep;
@@ -252,6 +243,14 @@ public interface GraphTraversal<S, E> extends Traversal<S, E> {
 
     public default GraphTraversal<S, E> dedup(final Function<E, ?> uniqueFunction) {
         return (GraphTraversal) this.addStep(new DedupStep<>(this, uniqueFunction));
+    }
+
+    public default GraphTraversal<S, E> dedup(final int low, final int high) {
+        return (GraphTraversal) this.addStep(new DedupRangeStep<>(this, null, low, high));
+    }
+
+    public default GraphTraversal<S, E> dedup(final Function<E, ?> uniqueFunction, final int low, final int high) {
+        return (GraphTraversal) this.addStep(new DedupRangeStep<>(this, uniqueFunction, low, high));
     }
 
     public default GraphTraversal<S, E> except(final String variable) {
