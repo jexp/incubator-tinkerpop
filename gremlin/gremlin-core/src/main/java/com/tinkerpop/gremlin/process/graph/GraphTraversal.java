@@ -285,6 +285,14 @@ public interface GraphTraversal<S, E> extends Traversal<S, E> {
         return (GraphTraversal) this.addStep(new HasStep<>(this, new HasContainer(key, predicate, value)));
     }
 
+    public default GraphTraversal<S, E> skip(final Predicate<Holder<E>> predicate) {
+        return (GraphTraversal) this.addStep(new SkipStep<>(this, predicate));
+    }
+
+    public default GraphTraversal<S, E> take(final Predicate<Holder<E>> predicate) {
+        return (GraphTraversal) this.addStep(new TakeStep<>(this, predicate));
+    }
+
     ///////////
 
     /*public default Traversal<S, Element> has(final String propertyKey, final String annotationKey) {
