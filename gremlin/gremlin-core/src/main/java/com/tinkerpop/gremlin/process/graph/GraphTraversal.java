@@ -1,66 +1,20 @@
 package com.tinkerpop.gremlin.process.graph;
 
-import com.tinkerpop.gremlin.process.Holder;
-import com.tinkerpop.gremlin.process.Path;
-import com.tinkerpop.gremlin.process.Step;
-import com.tinkerpop.gremlin.process.T;
-import com.tinkerpop.gremlin.process.Traversal;
+import com.tinkerpop.gremlin.process.*;
 import com.tinkerpop.gremlin.process.computer.ranking.PageRankStep;
 import com.tinkerpop.gremlin.process.graph.filter.*;
-import com.tinkerpop.gremlin.process.graph.map.AnnotatedValueStep;
-import com.tinkerpop.gremlin.process.graph.map.AnnotationValueStep;
-import com.tinkerpop.gremlin.process.graph.map.AnnotationValuesStep;
-import com.tinkerpop.gremlin.process.graph.map.BackStep;
-import com.tinkerpop.gremlin.process.graph.map.EdgeVertexStep;
-import com.tinkerpop.gremlin.process.graph.map.FlatMapStep;
-import com.tinkerpop.gremlin.process.graph.map.IdentityStep;
-import com.tinkerpop.gremlin.process.graph.map.IntersectStep;
-import com.tinkerpop.gremlin.process.graph.map.JumpStep;
-import com.tinkerpop.gremlin.process.graph.map.MapStep;
-import com.tinkerpop.gremlin.process.graph.map.MatchStep;
-import com.tinkerpop.gremlin.process.graph.map.OrderStep;
-import com.tinkerpop.gremlin.process.graph.map.PathStep;
-import com.tinkerpop.gremlin.process.graph.map.PropertyStep;
-import com.tinkerpop.gremlin.process.graph.map.PropertyValueStep;
-import com.tinkerpop.gremlin.process.graph.map.PropertyValuesStep;
-import com.tinkerpop.gremlin.process.graph.map.SelectStep;
-import com.tinkerpop.gremlin.process.graph.map.ShuffleStep;
-import com.tinkerpop.gremlin.process.graph.map.UnionStep;
-import com.tinkerpop.gremlin.process.graph.map.ValueStep;
-import com.tinkerpop.gremlin.process.graph.map.VertexStep;
-import com.tinkerpop.gremlin.process.graph.sideEffect.AggregateStep;
-import com.tinkerpop.gremlin.process.graph.sideEffect.GroupByStep;
-import com.tinkerpop.gremlin.process.graph.sideEffect.GroupCountStep;
-import com.tinkerpop.gremlin.process.graph.sideEffect.LinkStep;
-import com.tinkerpop.gremlin.process.graph.sideEffect.SideEffectStep;
+import com.tinkerpop.gremlin.process.graph.map.*;
+import com.tinkerpop.gremlin.process.graph.sideEffect.*;
 import com.tinkerpop.gremlin.process.graph.util.Tree;
 import com.tinkerpop.gremlin.process.util.FunctionRing;
 import com.tinkerpop.gremlin.process.util.HolderOptimizer;
 import com.tinkerpop.gremlin.process.util.TraversalHelper;
-import com.tinkerpop.gremlin.structure.AnnotatedValue;
-import com.tinkerpop.gremlin.structure.Compare;
-import com.tinkerpop.gremlin.structure.Contains;
-import com.tinkerpop.gremlin.structure.Direction;
-import com.tinkerpop.gremlin.structure.Edge;
-import com.tinkerpop.gremlin.structure.Element;
-import com.tinkerpop.gremlin.structure.Property;
-import com.tinkerpop.gremlin.structure.Vertex;
+import com.tinkerpop.gremlin.structure.*;
 import com.tinkerpop.gremlin.structure.util.HasContainer;
 import org.javatuples.Pair;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.function.BiPredicate;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Predicate;
-import java.util.function.Supplier;
+import java.util.*;
+import java.util.function.*;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
@@ -157,6 +111,10 @@ public interface GraphTraversal<S, E> extends Traversal<S, E> {
 
     public default GraphTraversal<S, Vertex> bothV() {
         return (GraphTraversal) this.addStep(new EdgeVertexStep(this, Direction.BOTH));
+    }
+
+    public default GraphTraversal<S, Vertex> otherV() {
+        return (GraphTraversal) this.addStep(new OtherVertexStep(this));
     }
 
     public default GraphTraversal<S, E> order() {

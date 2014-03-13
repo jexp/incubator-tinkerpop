@@ -2,6 +2,7 @@ package com.tinkerpop.gremlin.process.graph.map;
 
 import com.tinkerpop.gremlin.AbstractGremlinTest;
 import com.tinkerpop.gremlin.LoadGraphWith;
+import com.tinkerpop.gremlin.process.T;
 import com.tinkerpop.gremlin.structure.Edge;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.util.StreamFactory;
@@ -73,6 +74,10 @@ public abstract class TraversalTest extends AbstractGremlinTest {
     public abstract Iterator<Vertex> get_g_v1_out_out_out();
 
     public abstract Iterator<String> get_g_v1_out_propertyXnameX();
+
+    public abstract Iterator<Vertex> get_g_v4_bothE_otherV();
+
+    public abstract Iterator<Vertex> get_g_v4_bothE_hasXweight_LT_1X_otherV();
 
     // VERTEX ADJACENCY
 
@@ -261,6 +266,30 @@ public abstract class TraversalTest extends AbstractGremlinTest {
         }
         assertFalse(step.hasNext());
         assertEquals(2, counter);
+    }
+
+    @Test
+    @LoadGraphWith(CLASSIC)
+    public void g_v4_bothE_outV() {
+        final Iterator<Vertex> traversal = get_g_v4_bothE_otherV();
+        System.out.println("Testing: " + traversal);
+        final List<Vertex> vertices = StreamFactory.stream(traversal).collect(Collectors.toList());
+        assertEquals(3, vertices.size());
+        assertTrue(vertices.stream().anyMatch(v -> v.getId().equals("1")));
+        assertTrue(vertices.stream().anyMatch(v -> v.getId().equals("3")));
+        assertTrue(vertices.stream().anyMatch(v -> v.getId().equals("5")));
+        assertFalse(traversal.hasNext());
+    }
+
+    @Test
+    @LoadGraphWith(CLASSIC)
+    public void g_v4_bothE_hasXweight_LT_1X_otherV() {
+        final Iterator<Vertex> traversal = get_g_v4_bothE_hasXweight_LT_1X_otherV();
+        System.out.println("Testing: " + traversal);
+        final List<Vertex> vertices = StreamFactory.stream(traversal).collect(Collectors.toList());
+        assertEquals(1, vertices.size());
+        assertEquals(vertices.get(0).getId(), "3");
+        assertFalse(traversal.hasNext());
     }
 
     // EDGE/VERTEX ADJACENCY
@@ -528,6 +557,14 @@ public abstract class TraversalTest extends AbstractGremlinTest {
 
         public Iterator<String> get_g_v1_out_propertyXnameX() {
             return g.v(1).out().value("name");
+        }
+
+        public Iterator<Vertex> get_g_v4_bothE_otherV() {
+            return g.v(4).bothE().otherV();
+        }
+
+        public Iterator<Vertex> get_g_v4_bothE_hasXweight_LT_1X_otherV() {
+            return g.v(4).bothE().has("weight", T.lt, 1f).otherV();
         }
     }
 }
