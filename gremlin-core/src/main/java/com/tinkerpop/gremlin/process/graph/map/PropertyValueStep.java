@@ -9,7 +9,7 @@ import java.util.function.Supplier;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public class PropertyValueStep<E> extends MapStep<Element, E> {
+public class PropertyValueStep<E, F extends Element> extends MapStep<Element<F>, E> {
 
     public String key;
     public SOptional<E> defaultValue;

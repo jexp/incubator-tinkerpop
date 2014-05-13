@@ -36,7 +36,7 @@ import java.util.function.BiPredicate;
  *
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public interface Vertex extends Element {
+public interface Vertex extends Element<Vertex> {
 
     public Edge addEdge(final String label, final Vertex inVertex, final Object... keyValues);
 

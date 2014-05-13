@@ -13,7 +13,7 @@ import java.util.Set;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-class TinkerEdge extends TinkerElement implements Edge {
+class TinkerEdge extends TinkerElement<Edge> implements Edge {
 
     private final Vertex inVertex;
     private final Vertex outVertex;

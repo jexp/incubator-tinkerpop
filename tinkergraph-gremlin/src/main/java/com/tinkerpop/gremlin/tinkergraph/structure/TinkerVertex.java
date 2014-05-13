@@ -30,7 +30,7 @@ import java.util.Set;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public class TinkerVertex extends TinkerElement implements Vertex {
+public class TinkerVertex extends TinkerElement<Vertex> implements Vertex {
 
     protected Map<String, Set<Edge>> outEdges = new HashMap<>();
     protected Map<String, Set<Edge>> inEdges = new HashMap<>();

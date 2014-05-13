@@ -15,7 +15,7 @@ import java.util.function.Consumer;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class StrategyWrappedVertex extends StrategyWrappedElement implements Vertex, StrategyWrapped {
+public class StrategyWrappedVertex extends StrategyWrappedElement<Vertex> implements Vertex, StrategyWrapped {
     private final Vertex baseVertex;
     private final Strategy.Context<StrategyWrappedVertex> strategyContext;
 
@@ -30,7 +30,7 @@ public class StrategyWrappedVertex extends StrategyWrappedElement implements Ver
     }
 
     @Override
-    public <V> V getValue(final String key) throws NoSuchElementException {
+    public Object getValue(final String key) throws NoSuchElementException {
         return baseVertex.getValue(key);
     }
 
@@ -134,7 +134,7 @@ public class StrategyWrappedVertex extends StrategyWrappedElement implements Ver
     }
 
     @Override
-    public <E extends Element> GraphTraversal<E, E> sideEffect(final SConsumer<Holder<E>> consumer) {
+    public GraphTraversal<Vertex, Vertex> sideEffect(final SConsumer<Holder<Vertex>> consumer) {
         return this.baseVertex.sideEffect(consumer);
     }
 }

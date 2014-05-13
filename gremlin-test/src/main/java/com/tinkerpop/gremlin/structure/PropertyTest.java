@@ -163,7 +163,7 @@ public class PropertyTest {
             assertPropertyValue(vertex);
         }
 
-        private void assertPropertyValue(final Element element) {
+        private <E extends Element> void assertPropertyValue(final Element<E> element) {
             if (value instanceof Map)
                 tryCommit(g, graph -> {
                     final Map map = element.<Map>getProperty("key").get();

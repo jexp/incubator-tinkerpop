@@ -455,7 +455,7 @@ public class BatchGraph<T extends Graph> implements Graph {
         }
 
         @Override
-        public <E extends Element> GraphTraversal<E, E> sideEffect(final SConsumer<Holder<E>> consumer) {
+        public GraphTraversal<Vertex, Vertex> sideEffect(final SConsumer<Holder<Vertex>> consumer) {
             throw retrievalNotSupported();
         }
 

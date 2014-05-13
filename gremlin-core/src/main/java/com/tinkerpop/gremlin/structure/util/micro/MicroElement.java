@@ -3,6 +3,7 @@ package com.tinkerpop.gremlin.structure.util.micro;
 import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Graph;
 import com.tinkerpop.gremlin.structure.Property;
+import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.util.ElementHelper;
 
 import java.io.Serializable;
@@ -11,7 +12,7 @@ import java.util.Map;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public abstract class MicroElement implements Element, Serializable {
+public abstract class MicroElement<E extends Element> implements Element<E>, Serializable {
 
     Object id;
     String label;

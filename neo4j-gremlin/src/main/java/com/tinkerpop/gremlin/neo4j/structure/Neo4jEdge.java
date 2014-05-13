@@ -11,7 +11,7 @@ import org.neo4j.graphdb.Relationship;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class Neo4jEdge extends Neo4jElement implements Edge {
+public class Neo4jEdge extends Neo4jElement<Edge> implements Edge {
 
     public Neo4jEdge(final Relationship relationship, final Neo4jGraph graph) {
         super(graph);

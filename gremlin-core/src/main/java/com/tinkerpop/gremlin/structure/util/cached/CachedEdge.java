@@ -11,7 +11,7 @@ import java.util.Map;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class CachedEdge extends CachedElement implements Edge {
+public class CachedEdge extends CachedElement<Edge> implements Edge {
     private CachedVertex outVertex;
     private CachedVertex inVertex;
 

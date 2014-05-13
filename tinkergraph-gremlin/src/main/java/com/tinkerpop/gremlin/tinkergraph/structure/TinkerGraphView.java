@@ -2,6 +2,7 @@ package com.tinkerpop.gremlin.tinkergraph.structure;
 
 import com.tinkerpop.gremlin.process.computer.GraphComputer;
 import com.tinkerpop.gremlin.process.computer.VertexProgram;
+import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.util.ElementHelper;
 
@@ -56,7 +57,7 @@ public class TinkerGraphView implements Serializable {
     }
 
 
-    public <V> Property<V> getProperty(final TinkerElement element, final String key) {
+    public <E extends Element, V> Property<V> getProperty(final TinkerElement<E> element, final String key) {
         if (isComputeKey(key)) {
             return this.getValue(element.getId(), key);
         } else {

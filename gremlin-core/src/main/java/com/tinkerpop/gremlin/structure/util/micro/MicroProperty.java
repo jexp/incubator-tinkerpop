@@ -16,27 +16,27 @@ import java.util.Optional;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public class MicroProperty<V> implements Property, Serializable {
+public class MicroProperty<E extends Element, V> implements Property, Serializable {
 
     private String key;
     private V value;
-    private MicroElement element;
+    private Element<E> element;
     private int hashCode;
 
     private MicroProperty() {
 
     }
 
-    private MicroProperty(final Property property) {
+    private MicroProperty(final Property<V> property) {
         if (null == property)
             throw Graph.Exceptions.argumentCanNotBeNull("property");
 
         this.key = property.getKey();
-        this.value = (V) property.get();
+        this.value = property.get();
         this.hashCode = property.hashCode();
-        this.element = property.getElement() instanceof Vertex ?
-                MicroVertex.deflate((Vertex) property.getElement()) :
-                MicroEdge.deflate((Edge) property.getElement());
+        this.element =  property.getElement() instanceof Vertex ?
+                (Element<E>) MicroVertex.deflate((Vertex) property.getElement()) :
+                (Element<E>) MicroEdge.deflate((Edge) property.getElement());
     }
 
     public boolean isPresent() {
@@ -51,7 +51,7 @@ public class MicroProperty<V> implements Property, Serializable {
         return this.value;
     }
 
-    public Element getElement() {
+    public Element<E> getElement() {
         return this.element;
     }
 
@@ -87,9 +87,9 @@ public class MicroProperty<V> implements Property, Serializable {
     }
 
     public Property<V> inflate(final Graph graph) {
-        final Element element = (this.getElement() instanceof Vertex) ?
-                graph.v(this.getElement().getId()) :
-                graph.e(this.getElement().getId());
+        final Element<E> element = (this.getElement() instanceof Vertex) ?
+                (Element<E>) graph.v(this.getElement().getId()) :
+                (Element<E>) graph.e(this.getElement().getId());
         return Optional.<Property<V>>of(element.getProperty(this.key)).orElseThrow(() -> new IllegalStateException("The micro property could not be found at the provided graph"));
     }
 

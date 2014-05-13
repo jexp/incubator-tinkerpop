@@ -69,7 +69,7 @@ public class SubGraphStep<S> extends FilterStep<S> implements SideEffectCapable,
         return found;
     }
 
-    private Object[] getElementProperties(final Element e) {
+    private <E extends Element> Object[] getElementProperties(final Element<E> e) {
         final Stream propertyStream = e.getProperties().entrySet().stream().flatMap(entry -> Stream.of(entry.getKey(), entry.getValue().get()));
         if (subgraph.getFeatures().vertex().supportsUserSuppliedIds())
             return Stream.concat(propertyStream, Stream.of(Element.ID, e.getId())).toArray();

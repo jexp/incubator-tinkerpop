@@ -9,7 +9,7 @@ import com.tinkerpop.gremlin.structure.util.StringFactory;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public class MicroVertex extends MicroElement implements Vertex {
+public class MicroVertex extends MicroElement<Vertex> implements Vertex {
 
     private MicroVertex() {
 

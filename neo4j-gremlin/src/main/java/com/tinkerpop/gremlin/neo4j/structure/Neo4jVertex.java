@@ -18,7 +18,7 @@ import org.neo4j.graphdb.Relationship;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class Neo4jVertex extends Neo4jElement implements Vertex {
+public class Neo4jVertex extends Neo4jElement<Vertex> implements Vertex {
     public Neo4jVertex(final Node node, final Neo4jGraph graph) {
         super(graph);
         this.rawElement = node;

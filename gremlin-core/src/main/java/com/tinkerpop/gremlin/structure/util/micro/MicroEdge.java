@@ -12,7 +12,7 @@ import java.util.Iterator;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public class MicroEdge extends MicroElement implements Edge {
+public class MicroEdge extends MicroElement<Edge> implements Edge {
 
     MicroVertex outVertex;
     MicroVertex inVertex;

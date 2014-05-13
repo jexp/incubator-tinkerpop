@@ -26,7 +26,7 @@ import java.util.function.BiPredicate;
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  * @author Joshua Shinavier (http://fortytwo.net)
  */
-public abstract interface Element {
+public abstract interface Element<E extends Element> {
 
     public static final String ID = "id";
     public static final String LABEL = "label";
@@ -50,17 +50,17 @@ public abstract interface Element {
 
     public Map<String, Property> getHiddens();
 
-    public <E> Property<E> getProperty(final String key);
+    public <V> Property<V> getProperty(final String key);
 
-    public <E> void setProperty(final String key, final E value);
+    public <V> void setProperty(final String key, final V value);
 
     public default void setProperties(final Object... keyValues) {
         ElementHelper.legalPropertyKeyValueArray(keyValues);
         ElementHelper.attachProperties(this, keyValues);
     }
 
-    public default <E> E getValue(final String key) throws NoSuchElementException {
-        final Property<E> property = this.getProperty(key);
+    public default <V> V getValue(final String key) throws NoSuchElementException {
+        final Property<V> property = this.getProperty(key);
         if (property.isPresent())
             return property.get();
         else throw Property.Exceptions.propertyDoesNotExist(key);
@@ -195,7 +195,7 @@ public abstract interface Element {
         this.start().remove();
     }
 
-    public default <E extends Element> GraphTraversal<E, E> sideEffect(final SConsumer<Holder<E>> consumer) {
+    public default GraphTraversal<E, E> sideEffect(final SConsumer<Holder<E>> consumer) {
         return this.<E>start().sideEffect(consumer);
     }
 
@@ -215,7 +215,7 @@ public abstract interface Element {
         return this.<E>start().values(propertyKeys);
     }
 
-    public default <E extends Element> GraphTraversal<E, E> with(final Object... variableValues) {
+    public default GraphTraversal<E, E> with(final Object... variableValues) {
         return this.<E>start().with(variableValues);
     }
 

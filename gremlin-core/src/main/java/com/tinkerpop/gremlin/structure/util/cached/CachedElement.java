@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public abstract class CachedElement implements Element {
+public abstract class CachedElement<E extends Element> implements Element<E> {
 
     protected final Object id;
     protected final String label;

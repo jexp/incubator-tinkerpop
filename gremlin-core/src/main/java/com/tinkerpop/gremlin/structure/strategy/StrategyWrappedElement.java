@@ -10,7 +10,7 @@ import java.util.Set;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public abstract class StrategyWrappedElement implements Element, StrategyWrapped {
+public abstract class StrategyWrappedElement<E extends Element> implements Element<E>, StrategyWrapped {
     protected final StrategyWrappedGraph strategyWrappedGraph;
     private final Element baseElement;
     private final Strategy.Context<StrategyWrappedElement> elementStrategyContext;
@@ -26,7 +26,7 @@ public abstract class StrategyWrappedElement implements Element, StrategyWrapped
     }
 
     @Override
-    public <V> V getValue(final String key) throws NoSuchElementException {
+    public Object getValue(final String key) throws NoSuchElementException {
         return this.baseElement.getValue(key);
     }
 

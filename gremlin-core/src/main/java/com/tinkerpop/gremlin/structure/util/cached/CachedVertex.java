@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class CachedVertex extends CachedElement implements Vertex {
+public class CachedVertex extends CachedElement<Vertex> implements Vertex {
 
     public CachedVertex(final Object id, final String label) {
         super(id, label);

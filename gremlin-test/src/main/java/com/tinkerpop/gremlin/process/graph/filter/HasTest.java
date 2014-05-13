@@ -97,7 +97,7 @@ public abstract class HasTest extends AbstractGremlinProcessTest {
         final List<Element> list = StreamFactory.stream(traversal).collect(Collectors.toList());
         assertEquals(2, list.size());
         for (final Element v : list) {
-            assertTrue(v.<Integer>getValue("age") > 30);
+            assertTrue((int) v.<Integer>getValue("age") > 30);
         }
     }
 

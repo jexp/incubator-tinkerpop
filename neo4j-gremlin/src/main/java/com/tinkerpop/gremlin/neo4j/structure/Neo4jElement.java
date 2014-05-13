@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-abstract class Neo4jElement implements Element {
+abstract class Neo4jElement<E extends Element> implements Element<E> {
     protected final Neo4jGraph graph;
     protected PropertyContainer rawElement;
 

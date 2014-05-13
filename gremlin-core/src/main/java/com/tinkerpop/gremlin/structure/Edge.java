@@ -14,7 +14,7 @@ package com.tinkerpop.gremlin.structure;
  *
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public interface Edge extends Element {
+public interface Edge extends Element<Edge> {
 
     public Vertex getVertex(final Direction direction) throws IllegalArgumentException;
 

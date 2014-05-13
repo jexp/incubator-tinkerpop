@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-abstract class TinkerElement implements Element, Serializable {
+abstract class TinkerElement<E extends Element> implements Element<E>, Serializable {
 
     protected Map<String, Property> properties = new HashMap<>();
     protected final Object id;

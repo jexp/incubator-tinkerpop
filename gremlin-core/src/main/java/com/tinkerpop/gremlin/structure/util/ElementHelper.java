@@ -253,7 +253,7 @@ public class ElementHelper {
 
     }
 
-    public static Map<String, Object> propertyMap(final Element element, final String... propertyKeys) {
+    public static <E extends Element> Map<String, Object> propertyMap(final Element<E> element, final String... propertyKeys) {
         final Map<String, Object> values = new HashMap<>();
         if (null == propertyKeys || propertyKeys.length == 0) {
             element.getPropertyKeys().forEach(key -> values.put(key, element.getValue(key)));

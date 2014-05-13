@@ -7,7 +7,7 @@ import com.tinkerpop.gremlin.structure.Vertex;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class StrategyWrappedEdge extends StrategyWrappedElement implements Edge, StrategyWrapped {
+public class StrategyWrappedEdge extends StrategyWrappedElement<Edge> implements Edge, StrategyWrapped {
     private final Edge baseEdge;
     private final Strategy.Context<StrategyWrappedEdge> strategyContext;
 

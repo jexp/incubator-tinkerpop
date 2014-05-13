@@ -15,7 +15,7 @@ public abstract class IoElement {
     public String label;
     public Map properties;
 
-    protected static <T extends IoElement, E extends Element> T from(final E element, final T ioe) {
+    protected static <F extends Element, T extends IoElement, E extends Element<F>> T from(final E element, final T ioe) {
         ioe.id = element.getId();
         ioe.label = element.getLabel();
 
