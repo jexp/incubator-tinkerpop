@@ -112,7 +112,7 @@ public abstract class BackTest extends AbstractGremlinProcessTest {
         }
 
         public Traversal<Vertex,Vertex> get_g_v1_asXhereX_out_backXhereX(final Object v1Id) {
-            return g.v(v1Id).as("here").out().back("here");
+            return g.v(v1Id).<Vertex>as("here").out().back("here");
         }
 
         public Traversal<Vertex,Vertex> get_g_v4_out_asXhereX_hasXlang_javaX_backXhereX(final Object v4Id) {
@@ -138,7 +138,7 @@ public abstract class BackTest extends AbstractGremlinProcessTest {
         }
 
         public Traversal<Vertex,Vertex> get_g_v1_asXhereX_out_backXhereX(final Object v1Id) {
-            return g.v(v1Id).as("here").out().<Vertex>back("here").submit(g.compute());
+            return g.v(v1Id).<Vertex>as("here").out().<Vertex>back("here").submit(g.compute());
         }
 
         public Traversal<Vertex,Vertex> get_g_v4_out_asXhereX_hasXlang_javaX_backXhereX(final Object v4Id) {

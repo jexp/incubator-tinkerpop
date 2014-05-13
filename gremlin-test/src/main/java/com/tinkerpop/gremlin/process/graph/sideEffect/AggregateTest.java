@@ -67,7 +67,7 @@ public abstract class AggregateTest extends AbstractGremlinTest {
     public static class JavaAggregateTest extends AggregateTest {
 
         public Traversal<Vertex, Vertex> get_g_v1_aggregateXaX_outXcreatedX_inXcreatedX_exceptXaX(final Object v1Id) {
-            return g.v(v1Id).with("x", new HashSet<>()).aggregate("x").out("created").in("created").except("x");
+            return g.v(v1Id).<Vertex>with("x", new HashSet<>()).aggregate("x").out("created").in("created").except("x");
         }
 
         public List<String> get_g_V_valueXnameX_aggregateXaX_iterate_getXaX() {

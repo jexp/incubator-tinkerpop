@@ -13,17 +13,16 @@ public class Serializer {
 
     public static byte[] serializeObject(final Object object) throws IOException {
         final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        final ObjectOutputStream out = new ObjectOutputStream(outputStream);
-        out.writeObject(object);
-        out.close();
-        return outputStream.toByteArray();
+        try (ObjectOutputStream out = new ObjectOutputStream(outputStream)) {
+            out.writeObject(object);
+            return outputStream.toByteArray();
+        }
     }
 
     public static Object deserializeObject(final byte[] objectBytes) throws IOException, ClassNotFoundException {
         final ByteArrayInputStream inputStream = new ByteArrayInputStream(objectBytes);
-        final ObjectInputStream in = new ObjectInputStream(inputStream);
-        final Object object = in.readObject();
-        in.close();
-        return object;
+        try (ObjectInputStream in = new ObjectInputStream(inputStream)) {
+            return in.readObject();
+        }
     }
 }

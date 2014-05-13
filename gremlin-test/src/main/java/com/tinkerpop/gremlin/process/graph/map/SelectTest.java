@@ -99,19 +99,19 @@ public abstract class SelectTest extends AbstractGremlinProcessTest {
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_select(final Object v1Id) {
-            return g.v(v1Id).as("a").out("knows").as("b").select();
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select();
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_selectXnameX(final Object v1Id) {
-            return g.v(v1Id).as("a").out("knows").as("b").select(v -> ((Vertex) v).getValue("name"));
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select(v -> ((Vertex) v).getValue("name"));
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_selectXaX(final Object v1Id) {
-            return g.v(v1Id).as("a").out("knows").as("b").select(As.of("a"));
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select(As.of("a"));
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_selectXa_nameX(final Object v1Id) {
-            return g.v(v1Id).as("a").out("knows").as("b").select(As.of("a"), v -> ((Vertex) v).getValue("name"));
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select(As.of("a"), v -> ((Vertex) v).getValue("name"));
         }
     }
 
@@ -121,21 +121,21 @@ public abstract class SelectTest extends AbstractGremlinProcessTest {
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_select(final Object v1Id) {
-            return g.v(v1Id).as("a").out("knows").as("b").select().submit(g.compute());
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select().submit(g.compute());
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_selectXnameX(final Object v1Id) {
             // TODO: Micro elements do not store properties
-            return g.v(v1Id).as("a").out("knows").as("b").select(v -> ((Vertex) v).getValue("name")); //.submit(g.compute());
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select(v -> ((Vertex) v).getValue("name")); //.submit(g.compute());
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_selectXaX(final Object v1Id) {
-            return g.v(v1Id).as("a").out("knows").as("b").select(As.of("a")).submit(g.compute());
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select(As.of("a")).submit(g.compute());
         }
 
         public Traversal<Vertex,Path> get_g_v1_asXaX_outXknowsX_asXbX_selectXa_nameX(final Object v1Id) {
             // TODO: Micro elements do not store properties
-            return g.v(v1Id).as("a").out("knows").as("b").select(As.of("a"), v -> ((Vertex) v).getValue("name"));  // .submit(g.compute());
+            return g.v(v1Id).<Vertex>as("a").out("knows").as("b").select(As.of("a"), v -> ((Vertex) v).getValue("name"));  // .submit(g.compute());
         }
     }
 }

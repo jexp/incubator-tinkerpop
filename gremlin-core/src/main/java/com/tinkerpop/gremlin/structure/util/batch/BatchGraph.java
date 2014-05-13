@@ -435,17 +435,17 @@ public class BatchGraph<T extends Graph> implements Graph {
         }
 
         @Override
-        public <E2> GraphTraversal<Vertex, AnnotatedValue<E2>> annotatedValues(final String propertyKey) {
+        public <E extends Element, E2> GraphTraversal<E, AnnotatedValue<E2>> annotatedValues(final String propertyKey) {
             throw retrievalNotSupported();
         }
 
         @Override
-        public <E2> GraphTraversal<Vertex, Property<E2>> property(final String propertyKey) {
+        public <E extends Element, E2> GraphTraversal<E, Property<E2>> property(final String propertyKey) {
             throw retrievalNotSupported();
         }
 
         @Override
-        public <E2> GraphTraversal<Vertex, E2> value(final String propertyKey) {
+        public <E extends Element, E2> GraphTraversal<E, E2> value(final String propertyKey) {
             throw retrievalNotSupported();
         }
 
@@ -455,7 +455,7 @@ public class BatchGraph<T extends Graph> implements Graph {
         }
 
         @Override
-        public GraphTraversal<Vertex, Vertex> sideEffect(final SConsumer<Holder<Vertex>> consumer) {
+        public <E extends Element> GraphTraversal<E, E> sideEffect(final SConsumer<Holder<E>> consumer) {
             throw retrievalNotSupported();
         }
 

@@ -4,6 +4,7 @@ import com.tinkerpop.gremlin.process.graph.GraphTraversal;
 import com.tinkerpop.gremlin.process.Holder;
 import com.tinkerpop.gremlin.structure.AnnotatedValue;
 import com.tinkerpop.gremlin.structure.Edge;
+import com.tinkerpop.gremlin.structure.Element;
 import com.tinkerpop.gremlin.structure.Property;
 import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.util.function.SConsumer;
@@ -113,17 +114,17 @@ public class StrategyWrappedVertex extends StrategyWrappedElement implements Ver
     }
 
     @Override
-    public <E2> GraphTraversal<Vertex, AnnotatedValue<E2>> annotatedValues(final String propertyKey) {
-        return this.baseVertex.annotatedValues(propertyKey);
+    public <E extends Element, E2> GraphTraversal<E, AnnotatedValue<E2>> annotatedValues(final String propertyKey) {
+        return this.baseVertex.<E, E2>annotatedValues(propertyKey);
     }
 
     @Override
-    public <E2> GraphTraversal<Vertex, Property<E2>> property(final String propertyKey) {
+    public <E extends Element, E2> GraphTraversal<E, Property<E2>> property(final String propertyKey) {
         return this.baseVertex.property(propertyKey);
     }
 
     @Override
-    public <E2> GraphTraversal<Vertex, E2> value(final String propertyKey) {
+    public <E extends Element, E2> GraphTraversal<E, E2> value(final String propertyKey) {
         return this.baseVertex.value(propertyKey);
     }
 
@@ -133,7 +134,7 @@ public class StrategyWrappedVertex extends StrategyWrappedElement implements Ver
     }
 
     @Override
-    public GraphTraversal<Vertex, Vertex> sideEffect(final SConsumer<Holder<Vertex>> consumer) {
+    public <E extends Element> GraphTraversal<E, E> sideEffect(final SConsumer<Holder<E>> consumer) {
         return this.baseVertex.sideEffect(consumer);
     }
 }

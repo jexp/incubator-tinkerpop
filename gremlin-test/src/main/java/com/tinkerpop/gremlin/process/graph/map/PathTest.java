@@ -80,7 +80,7 @@ public abstract class PathTest extends AbstractGremlinProcessTest {
         }
 
         public Traversal<Vertex, Path> get_g_v1_valueXnameX_path(final Object v1Id) {
-            return g.v(v1Id).value("name").path();
+            return g.v(v1Id).<Vertex, Vertex>value("name").path();
         }
 
         public Traversal<Vertex, Path> get_g_v1_out_pathXage_nameX(final Object v1Id) {
@@ -100,7 +100,7 @@ public abstract class PathTest extends AbstractGremlinProcessTest {
         }
 
         public Traversal<Vertex, Path> get_g_v1_valueXnameX_path(final Object v1Id) {
-            return g.v(v1Id).value("name").path().submit(g.compute());
+            return g.v(v1Id).<Vertex, Vertex>value("name").path().submit(g.compute());
         }
 
         public Traversal<Vertex, Path> get_g_v1_out_pathXage_nameX(final Object v1Id) {

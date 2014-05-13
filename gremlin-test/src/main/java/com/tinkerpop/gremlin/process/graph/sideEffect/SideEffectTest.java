@@ -65,7 +65,7 @@ public abstract class SideEffectTest extends AbstractGremlinTest {
     public static class JavaSideEffectTest extends SideEffectTest {
         public Traversal<Vertex, String> get_g_v1_sideEffectXstore_aX_valueXnameX(final Object v1Id) {
             final List<Vertex> a = new ArrayList<>();
-            return g.v(v1Id).with("a", a).sideEffect(holder -> {
+            return g.v(v1Id).<Vertex>with("a", a).sideEffect(holder -> {
                 a.clear();
                 a.add(holder.get());
             }).value("name");
@@ -74,7 +74,7 @@ public abstract class SideEffectTest extends AbstractGremlinTest {
         public Traversal<Vertex, String> get_g_v1_out_sideEffectXincr_cX_valueXnameX(final Object v1Id) {
             final List<Integer> c = new ArrayList<>();
             c.add(0);
-            return g.v(v1Id).with("c", c).out().sideEffect(holder -> {
+            return g.v(v1Id).<Vertex>with("c", c).out().sideEffect(holder -> {
                 Integer temp = c.get(0);
                 c.clear();
                 c.add(temp + 1);
