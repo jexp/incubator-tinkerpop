@@ -20,6 +20,14 @@ import java.util.Set;
  */
 public interface Step<S, E> extends Iterator<Traverser<E>>, Cloneable {
 
+    public default <A> void teleport(final Traverser<A> traverser, final Step<A, ?> destination) {
+        destination.addStart(traverser);
+    }
+
+    public default <A> void teleport(final Traverser<A> traverser, final Traversal<A, ?> destination) {
+        destination.asAdmin().addStart(traverser);
+    }
+
     /**
      * Add a iterator of {@link Traverser} objects of type S to the step.
      *

@@ -8,7 +8,6 @@ import com.tinkerpop.gremlin.process.graph.step.util.ComputerAwareStep;
 import com.tinkerpop.gremlin.process.graph.strategy.SideEffectCapStrategy;
 import com.tinkerpop.gremlin.process.traverser.TraverserRequirement;
 import com.tinkerpop.gremlin.process.util.TraversalHelper;
-import com.tinkerpop.gremlin.util.iterator.IteratorUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -70,7 +69,7 @@ public final class ChooseStep<S, E, M> extends ComputerAwareStep<S, E> implement
             final Traverser<S> start = this.starts.next();
             final Traversal<S, E> choice = this.choices.get(this.mapFunction.apply(start.get()));
             if (null != choice) {
-                choice.asAdmin().addStart(start);
+                this.teleport(start, choice);
                 return TraversalHelper.getEnd(choice.asAdmin());
             }
         }
@@ -82,8 +81,8 @@ public final class ChooseStep<S, E, M> extends ComputerAwareStep<S, E> implement
             final Traverser<S> start = this.starts.next();
             final Traversal<S, E> choice = this.choices.get(this.mapFunction.apply(start.get()));
             if (null != choice) {
-                start.asAdmin().setStepId(TraversalHelper.getStart(choice.asAdmin()).getId());
-                return IteratorUtils.of((Traverser) start);
+                this.teleport(start, choice);
+                return Collections.emptyIterator();
             }
         }
     }

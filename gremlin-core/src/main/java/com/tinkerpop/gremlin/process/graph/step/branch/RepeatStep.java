@@ -145,7 +145,7 @@ public final class RepeatStep<S> extends ComputerAwareStep<S, S> implements Trav
                     start.resetLoops();
                     return IteratorUtils.of(start);
                 } else {
-                    this.repeatTraversal.asAdmin().addStart(start);
+                    this.teleport(start, this.repeatTraversal);
                     if (doEmit(start)) {
                         final Traverser.Admin<S> emitSplit = start.split();
                         emitSplit.resetLoops();
@@ -153,14 +153,14 @@ public final class RepeatStep<S> extends ComputerAwareStep<S, S> implements Trav
                     }
                 }
             } else {
-                final Traverser.Admin<S> s = this.starts.next();
-                if (this.untilFirst && doUntil(s)) {
-                    s.resetLoops();
-                    return IteratorUtils.of(s);
+                final Traverser.Admin<S> start = this.starts.next();
+                if (this.untilFirst && doUntil(start)) {
+                    start.resetLoops();
+                    return IteratorUtils.of(start);
                 }
-                this.repeatTraversal.asAdmin().addStart(s);
-                if (this.emitFirst && doEmit(s)) {
-                    final Traverser.Admin<S> emitSplit = s.split();
+                this.teleport(start, this.repeatTraversal);
+                if (this.emitFirst && doEmit(start)) {
+                    final Traverser.Admin<S> emitSplit = start.split();
                     emitSplit.resetLoops();
                     return IteratorUtils.of(emitSplit);
                 }
@@ -173,18 +173,16 @@ public final class RepeatStep<S> extends ComputerAwareStep<S, S> implements Trav
         final Traverser.Admin<S> start = this.starts.next();
         if (this.untilFirst && doUntil(start)) {
             start.resetLoops();
-            start.setStepId(this.getNextStep().getId());
-            return IteratorUtils.of(start);
+            teleport(start, this.getNextStep());
+            return Collections.emptyIterator();
         } else {
-            start.setStepId(TraversalHelper.getStart(this.repeatTraversal.asAdmin()).getId());
+            this.teleport(start, this.repeatTraversal);
             if (this.emitFirst && doEmit(start)) {
                 final Traverser.Admin<S> emitSplit = start.split();
                 emitSplit.resetLoops();
-                emitSplit.setStepId(this.getNextStep().getId());
-                return IteratorUtils.of(start, emitSplit);
-            } else {
-                return IteratorUtils.of(start);
+                this.teleport(emitSplit, this.getNextStep());
             }
+            return Collections.emptyIterator();
         }
     }
 
