@@ -5,6 +5,8 @@ import com.tinkerpop.gremlin.structure.Vertex;
 import com.tinkerpop.gremlin.structure.util.detached.Attachable;
 
 import java.io.Serializable;
+import java.util.Set;
+import java.util.function.Function;
 
 /**
  * A {@link Traverser} represents the current state of an object flowing through a {@link Traversal}.
@@ -130,6 +132,59 @@ public interface Traverser<T> extends Serializable, Comparable<Traverser<T>>, Cl
      * They should not be accessed by the user during lambda-based manipulations.
      */
     public interface Admin<T> extends Traverser<T>, Attachable<Admin<T>> {
+
+        public enum Component implements Function<Traverser.Admin, Object> {
+            OBJECT {
+                @Override
+                public Object apply(final Traverser.Admin traverser) {
+                    return traverser.get();
+                }
+                @Override
+                public void set(final Traverser.Admin traverser, final Object value) {
+                    traverser.set(value);
+                }
+            }, STEP_ID {
+                @Override
+                public Object apply(final Traverser.Admin traverser) {
+                    return traverser.getStepId();
+                }
+                @Override
+                public void set(final Traverser.Admin traverser, final Object value) {
+                    traverser.setStepId((String)value);
+                }
+            }, PATH {
+                @Override
+                public Object apply(final Traverser.Admin traverser) {
+                    return traverser.path();
+                }
+                @Override
+                public void set(final Traverser.Admin traverser, final Object value) {
+                    traverser.setPath((Path)value);
+                }
+            }, LOOPS {
+                @Override
+                public Object apply(final Traverser.Admin traverser) {
+                    return traverser.loops();
+                }
+
+            }, BULK {
+                @Override
+                public Object apply(final Traverser.Admin traverser) {
+                    return traverser.bulk();
+                }
+                @Override
+                public void set(final Traverser.Admin traverser, final Object value) {
+                    traverser.setBulk((Path)value);
+                }
+            }, SACK {
+                @Override
+                public Object apply(final Traverser.Admin traverser) {
+                    return traverser.sack();
+                }
+            }
+
+            public abstract void set(final Traverser.Admin traverser, final Object value);
+            }
 
         public static final String HALT = "halt";
 
@@ -261,5 +316,12 @@ public interface Traverser<T> extends Serializable, Comparable<Traverser<T>>, Cl
          * @return the traversal sideEffects of the traverser
          */
         public TraversalSideEffects getSideEffects();
+
+        public Set<Component> getComponents();
+
+        public default void setComponents(final Set<Component> components) {
+
+        }
+
     }
 }

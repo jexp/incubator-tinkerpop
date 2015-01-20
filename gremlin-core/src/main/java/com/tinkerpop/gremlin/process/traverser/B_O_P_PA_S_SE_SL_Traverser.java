@@ -4,12 +4,17 @@ import com.tinkerpop.gremlin.process.Step;
 import com.tinkerpop.gremlin.process.traverser.util.AbstractPathTraverser;
 import com.tinkerpop.gremlin.process.util.ImmutablePath;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
 public class B_O_P_PA_S_SE_SL_Traverser<T> extends AbstractPathTraverser<T> {
+
+    private final static Set<Component> COMPONENTS = new HashSet<>(Arrays.asList(Component.OBJECT, Component.STEP_ID, Component.BULK, Component.LOOPS));
 
     protected B_O_P_PA_S_SE_SL_Traverser() {
     }
@@ -37,4 +42,8 @@ public class B_O_P_PA_S_SE_SL_Traverser<T> extends AbstractPathTraverser<T> {
                 && (null == this.sack);
     }
 
+    @Override
+    public Set<Component> getComponents() {
+        return COMPONENTS;
+    }
 }
