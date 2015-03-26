@@ -38,18 +38,10 @@ import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.apache.tinkerpop.gremlin.structure.util.wrapped.WrappedGraph;
 import org.apache.tinkerpop.gremlin.util.StreamFactory;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.factory.GraphDatabaseFactory;
-import org.neo4j.graphdb.factory.HighlyAvailableGraphDatabaseFactory;
-import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.tinkerpop.api.Neo4jFactory;
+import org.neo4j.tinkerpop.api.Neo4jGraphAPI;
+import org.neo4j.tinkerpop.api.Neo4jTx;
 
-import javax.transaction.SystemException;
-import javax.transaction.TransactionManager;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -83,7 +75,7 @@ import java.util.stream.Stream;
         method = "shouldRemoveEdgesWithoutConcurrentModificationException",
         reason = "Neo4j global graph operators stream removes edges after access to the global iterator."
 )
-public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
+public class Neo4jGraph implements Graph, WrappedGraph<Neo4jGraphAPI> {
 
     static {
         TraversalStrategies.GlobalCache.registerStrategies(Neo4jGraph.class, TraversalStrategies.GlobalCache.getStrategies(Graph.class).clone().addStrategies(Neo4jGraphStepStrategy.instance()));
@@ -95,11 +87,10 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
 
     private final Features features = new Neo4jGraphFeatures();
 
-    private GraphDatabaseService baseGraph;
+    private Neo4jGraphAPI baseGraph;
     private BaseConfiguration configuration = new BaseConfiguration();
 
     public static final String CONFIG_DIRECTORY = "gremlin.neo4j.directory";
-    public static final String CONFIG_HA = "gremlin.neo4j.ha";
     public static final String CONFIG_CONF = "gremlin.neo4j.conf";
     public static final String CONFIG_META_PROPERTIES = "gremlin.neo4j.metaProperties";
     public static final String CONFIG_MULTI_PROPERTIES = "gremlin.neo4j.multiProperties";
@@ -112,14 +103,9 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     protected final boolean supportsMultiProperties;
     protected boolean checkElementsInTransaction = false;
 
-    protected final TransactionManager transactionManager;
-    protected final ExecutionEngine cypher;
-
-    private Neo4jGraph(final GraphDatabaseService baseGraph) {
+    private Neo4jGraph(final Neo4jGraphAPI baseGraph) {
         this.configuration.copy(EMPTY_CONFIGURATION);
         this.baseGraph = baseGraph;
-        this.transactionManager = ((GraphDatabaseAPI) baseGraph).getDependencyResolver().resolveDependency(TransactionManager.class);
-        this.cypher = new ExecutionEngine(this.baseGraph);
         this.neo4jGraphVariables = new Neo4jGraphVariables(this);
 
         ///////////
@@ -158,14 +144,7 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
             this.configuration.copy(configuration);
             final String directory = this.configuration.getString(CONFIG_DIRECTORY);
             final Map neo4jSpecificConfig = ConfigurationConverter.getMap(this.configuration.subset(CONFIG_CONF));
-            final boolean ha = this.configuration.getBoolean(CONFIG_HA, false);
-            // if HA is enabled then use the correct factory to instantiate the GraphDatabaseService
-            this.baseGraph = ha ?
-                    new HighlyAvailableGraphDatabaseFactory().newHighlyAvailableDatabaseBuilder(directory).setConfig(neo4jSpecificConfig).newGraphDatabase() :
-                    new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(directory).
-                            setConfig(neo4jSpecificConfig).newGraphDatabase();
-            this.transactionManager = ((GraphDatabaseAPI) this.baseGraph).getDependencyResolver().resolveDependency(TransactionManager.class);
-            this.cypher = new ExecutionEngine(this.baseGraph);
+            this.baseGraph = Neo4jFactory.Builder.open(directory,neo4jSpecificConfig);
             this.neo4jGraphVariables = new Neo4jGraphVariables(this);
             ///////////
             if (!this.neo4jGraphVariables.get(Hidden.hide(CONFIG_META_PROPERTIES)).isPresent())
@@ -220,7 +199,7 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     /**
      * Construct a Neo4jGraph instance using an existing Neo4j raw instance.
      */
-    public static Neo4jGraph open(final GraphDatabaseService baseGraph) {
+    public static Neo4jGraph open(final Neo4jGraphAPI baseGraph) {
         return new Neo4jGraph(Optional.ofNullable(baseGraph).orElseThrow(() -> Graph.Exceptions.argumentCanNotBeNull("baseGraph")));
     }
 
@@ -233,7 +212,7 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
         final String label = ElementHelper.getLabelValue(keyValues).orElse(Vertex.DEFAULT_LABEL);
 
         this.tx().readWrite();
-        final Neo4jVertex vertex = new Neo4jVertex(this.baseGraph.createNode(Neo4jHelper.makeLabels(label)), this);
+        final Neo4jVertex vertex = new Neo4jVertex(this.baseGraph.createNode(label.split(Neo4jVertex.LABEL_DELIMINATOR)), this);
         ElementHelper.attachProperties(vertex, VertexProperty.Cardinality.list, keyValues);
         return vertex;
     }
@@ -267,7 +246,7 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     public Iterator<Vertex> vertices(final Object... vertexIds) {
         this.tx().readWrite();
         if (0 == vertexIds.length) {
-            return StreamFactory.stream(GlobalGraphOperations.at(this.getBaseGraph()).getAllNodes())
+            return StreamFactory.stream(this.getBaseGraph().allNodes())
                     .filter(node -> !this.checkElementsInTransaction || !Neo4jHelper.isDeleted(node))
                     .filter(node -> !node.hasLabel(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL))
                     .map(node -> (Vertex) new Neo4jVertex(node, this)).iterator();
@@ -277,8 +256,9 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
                     .flatMap(id -> {
                         try {
                             return Stream.of((Vertex) new Neo4jVertex(this.getBaseGraph().getNodeById(((Number) id).longValue()), this));
-                        } catch (final NotFoundException e) {
-                            return Stream.empty();
+                        } catch (final RuntimeException e) {
+                            if (Neo4jHelper.isNotFound(e)) return Stream.empty();
+                            throw e;
                         }
                     }).iterator();
         }
@@ -288,9 +268,9 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     public Iterator<Edge> edges(final Object... edgeIds) {
         this.tx().readWrite();
         if (0 == edgeIds.length) {
-            return StreamFactory.stream(GlobalGraphOperations.at(this.getBaseGraph()).getAllRelationships())
+            return StreamFactory.stream(this.getBaseGraph().allRelationships())
                     .filter(relationship -> !this.checkElementsInTransaction || !Neo4jHelper.isDeleted(relationship))
-                    .filter(relationship -> !relationship.getType().name().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX))
+                    .filter(relationship -> !relationship.type().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX))
                     .map(relationship -> (Edge) new Neo4jEdge(relationship, this)).iterator();
         } else {
             return Stream.of(edgeIds)
@@ -298,8 +278,9 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
                     .flatMap(id -> {
                         try {
                             return Stream.of((Edge) new Neo4jEdge(this.getBaseGraph().getRelationshipById(((Number) id).longValue()), this));
-                        } catch (final NotFoundException e) {
-                            return Stream.empty();
+                        } catch (final RuntimeException e) {
+                            if (Neo4jHelper.isNotFound(e)) return Stream.empty();
+                            throw e;
                         }
                     }).iterator();
         }
@@ -326,17 +307,8 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     }
 
     @Override
-    public GraphDatabaseService getBaseGraph() {
+    public Neo4jGraphAPI getBaseGraph() {
         return this.baseGraph;
-    }
-
-    /**
-     * Provides access to Neo4j's schema system for managing indices.
-     *
-     * @return Neo4j's schema/index manager.
-     */
-    public Schema getSchema() {
-        return this.baseGraph.schema();
     }
 
     /**
@@ -374,13 +346,18 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
     public <S, E> GraphTraversal<S, E> cypher(final String query, final Map<String, Object> parameters) {
         this.tx().readWrite();
         final GraphTraversal.Admin<S, E> traversal = new DefaultGraphTraversal<>(this);
-        traversal.addStep(new StartStep(traversal, new Neo4jCypherIterator<S>((ResourceIterator) this.cypher.execute(query, parameters).iterator(), this)));
+        Iterator result = this.baseGraph.execute(query, parameters);
+        traversal.addStep(new StartStep(traversal, new Neo4jCypherIterator<S>(result, this)));
         return traversal;
+    }
+
+    public Iterator<Map<String, Object>> execute(String query, Map<String, Object> params) {
+        return new Neo4jCypherIterator(baseGraph.execute(query,params),this);
     }
 
     class Neo4jTransaction extends AbstractTransaction {
 
-        protected final ThreadLocal<org.neo4j.graphdb.Transaction> threadLocalTx = ThreadLocal.withInitial(() -> null);
+        protected final ThreadLocal<Neo4jTx> threadLocalTx = ThreadLocal.withInitial(() -> null);
 
         public Neo4jTransaction() {
             super(Neo4jGraph.this);
@@ -388,7 +365,7 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
 
         @Override
         public void doOpen() {
-            threadLocalTx.set(getBaseGraph().beginTx());
+            threadLocalTx.set(getBaseGraph().tx());
         }
 
         @Override
@@ -406,12 +383,12 @@ public class Neo4jGraph implements Graph, WrappedGraph<GraphDatabaseService> {
         @Override
         public void doRollback() throws TransactionException {
             try {
-                javax.transaction.Transaction t = transactionManager.getTransaction();
-                if (null == t || t.getStatus() == javax.transaction.Status.STATUS_ROLLEDBACK)
-                    return;
+//                javax.transaction.Transaction t = transactionManager.getTransaction();
+//                if (null == t || t.getStatus() == javax.transaction.Status.STATUS_ROLLEDBACK)
+//                    return;
 
                 threadLocalTx.get().failure();
-            } catch (SystemException e) {
+            } catch (Exception e) {
                 throw new TransactionException(e);
             } finally {
                 threadLocalTx.get().close();

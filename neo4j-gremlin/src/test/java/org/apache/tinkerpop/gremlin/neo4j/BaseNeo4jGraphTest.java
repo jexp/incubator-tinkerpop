@@ -26,7 +26,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
-import org.neo4j.tooling.GlobalGraphOperations;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -95,7 +94,7 @@ public class BaseNeo4jGraphTest {
     protected static void validateCounts(final Neo4jGraph graph, int gV, int gE, int gN, int gR) {
         assertEquals(gV, IteratorUtils.count(graph.vertices()));
         assertEquals(gE, IteratorUtils.count(graph.edges()));
-        assertEquals(gN, countIterable(GlobalGraphOperations.at(graph.getBaseGraph()).getAllNodes()));
-        assertEquals(gR, countIterable(GlobalGraphOperations.at(graph.getBaseGraph()).getAllRelationships()));
+        assertEquals(gN, countIterable(graph.getBaseGraph().allNodes()));
+        assertEquals(gR, countIterable(graph.getBaseGraph().allRelationships()));
     }
 }

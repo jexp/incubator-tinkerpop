@@ -29,12 +29,9 @@ import org.apache.tinkerpop.gremlin.neo4j.structure.Neo4jVertex;
 import org.apache.tinkerpop.gremlin.neo4j.structure.Neo4jVertexProperty;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.commons.configuration.Configuration;
-import org.neo4j.graphdb.DynamicLabel;
 
 import java.io.File;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
@@ -79,67 +76,65 @@ public abstract class AbstractNeo4jGraphProvider extends AbstractGraphProvider {
             if (pick == 1) {
                 g.tx().readWrite();
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("artist")).on("name").create();
+                    createIndex(g, "CREATE INDEX ON :artist(name)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("song")).on("name").create();
+                    createIndex(g, "CREATE INDEX ON :song(name)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("song")).on("songType").create();
+                    createIndex(g, "CREATE INDEX ON :song(songType)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("song")).on("performances").create();
+                    createIndex(g, "CREATE INDEX ON :song(performances)");
                 g.tx().commit();
             } else if (pick == 2) {
                 g.tx().readWrite();
-                g.getBaseGraph().index().getNodeAutoIndexer().setEnabled(true);
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("name");
+                    g.getBaseGraph().autoIndexProperties(true, "name");
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("songType");
+                    g.getBaseGraph().autoIndexProperties(true, "songType");
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("performances");
+                    g.getBaseGraph().autoIndexProperties(true, "performances");
                 g.tx().commit();
             }
         } else if (graphData.equals(LoadGraphWith.GraphData.MODERN)) {
             if (pick == 1) {
                 g.tx().readWrite();
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("person")).on("name").create();
+                    createIndex(g, "CREATE INDEX ON :person(name)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("person")).on("age").create();
+                    createIndex(g, "CREATE INDEX ON :person(age)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("software")).on("name").create();
-                if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("software")).on("lang").create();
+                    createIndex(g, "CREATE INDEX ON :software(name)");
+                if (random.nextBoolean()) {
+                    createIndex(g, "CREATE INDEX ON :software(lang)");
+                }
                 g.tx().commit();
             } else if (pick == 2) {
                 g.tx().readWrite();
-                g.getBaseGraph().index().getNodeAutoIndexer().setEnabled(true);
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("name");
+                    g.getBaseGraph().autoIndexProperties(true, "name");
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("age");
+                    g.getBaseGraph().autoIndexProperties(true, "age");
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("lang");
+                    g.getBaseGraph().autoIndexProperties(true, "lang");
                 g.tx().commit();
             }
         } else if (graphData.equals(LoadGraphWith.GraphData.CLASSIC)) {
             if (pick == 1) {
                 g.tx().readWrite();
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("vertex")).on("name").create();
+                    createIndex(g, "CREATE INDEX ON :vertex(name)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("vertex")).on("age").create();
+                    createIndex(g, "CREATE INDEX ON :vertex(age)");
                 if (random.nextBoolean())
-                    g.getBaseGraph().schema().indexFor(DynamicLabel.label("vertex")).on("lang").create();
+                    createIndex(g, "CREATE INDEX ON :vertex(lang)");
                 g.tx().commit();
             } else if (pick == 2) {
                 g.tx().readWrite();
-                g.getBaseGraph().index().getNodeAutoIndexer().setEnabled(true);
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("name");
+                    g.getBaseGraph().autoIndexProperties(true, "name");
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("age");
+                    g.getBaseGraph().autoIndexProperties(true, "age");
                 if (random.nextBoolean())
-                    g.getBaseGraph().index().getNodeAutoIndexer().startAutoIndexingProperty("lang");
+                    g.getBaseGraph().autoIndexProperties(true, "lang");
                 g.tx().commit();
             }
         } else {
@@ -147,6 +142,11 @@ public abstract class AbstractNeo4jGraphProvider extends AbstractGraphProvider {
             // TODO: add meta_property indices when meta_property graph is provided
             //throw new RuntimeException("Could not load graph with " + graphData);
         }
+    }
+
+    private void createIndex(Neo4jGraph g, String indexQuery) {
+        Iterator<Map<String, Object>> it = g.getBaseGraph().execute(indexQuery, null);
+        while (it.hasNext()) it.next();
     }
 
     @Override

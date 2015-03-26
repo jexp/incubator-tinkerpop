@@ -21,9 +21,8 @@ package org.apache.tinkerpop.gremlin.neo4j.process.traversal.step.util;
 import org.apache.tinkerpop.gremlin.neo4j.structure.Neo4jEdge;
 import org.apache.tinkerpop.gremlin.neo4j.structure.Neo4jGraph;
 import org.apache.tinkerpop.gremlin.neo4j.structure.Neo4jVertex;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.tinkerpop.api.Neo4jNode;
+import org.neo4j.tinkerpop.api.Neo4jRelationship;
 
 import java.util.Iterator;
 import java.util.Map;
@@ -34,10 +33,10 @@ import java.util.stream.Collectors;
  */
 public class Neo4jCypherIterator<T> implements Iterator<Map<String, T>> {
 
-    private final ResourceIterator<Map<String, T>> iterator;
+    private final Iterator<Map<String, T>> iterator;
     private final Neo4jGraph graph;
 
-    public Neo4jCypherIterator(final ResourceIterator<Map<String, T>> iterator, final Neo4jGraph graph) {
+    public Neo4jCypherIterator(final Iterator<Map<String, T>> iterator, final Neo4jGraph graph) {
         this.iterator = iterator;
         this.graph = graph;
     }
@@ -53,10 +52,10 @@ public class Neo4jCypherIterator<T> implements Iterator<Map<String, T>> {
                 Map.Entry::getKey,
                 entry -> {
                     final T val = entry.getValue();
-                    if (Node.class.isAssignableFrom(val.getClass())) {
-                        return (T) new Neo4jVertex((Node) val, this.graph);
-                    } else if (Relationship.class.isAssignableFrom(val.getClass())) {
-                        return (T) new Neo4jEdge((Relationship) val, this.graph);
+                    if (Neo4jNode.class.isAssignableFrom(val.getClass())) {
+                        return (T) new Neo4jVertex((Neo4jNode) val, this.graph);
+                    } else if (Neo4jRelationship.class.isAssignableFrom(val.getClass())) {
+                        return (T) new Neo4jEdge((Neo4jRelationship) val, this.graph);
                     } else {
                         return val;
                     }

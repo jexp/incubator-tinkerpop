@@ -23,8 +23,8 @@ import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.tinkerpop.api.Neo4jEntity;
+import org.neo4j.tinkerpop.api.Neo4jNode;
 
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
@@ -84,14 +84,14 @@ public class Neo4jProperty<V> implements Property<V> {
     public void remove() {
         this.graph.tx().readWrite();
         if (this.element instanceof VertexProperty) {
-            final Node node = ((Neo4jVertexProperty) this.element).getBaseVertex();
+            final Neo4jNode node = ((Neo4jVertexProperty) this.element).getBaseVertex();
             if (null != node && node.hasProperty(this.key)) {
                 node.removeProperty(this.key);
             }
         } else {
-            final PropertyContainer propertyContainer = ((Neo4jElement) this.element).getBaseElement();
-            if (propertyContainer.hasProperty(this.key)) {
-                propertyContainer.removeProperty(this.key);
+            final Neo4jEntity entity = ((Neo4jElement) this.element).getBaseElement();
+            if (entity.hasProperty(this.key)) {
+                entity.removeProperty(this.key);
             }
         }
     }

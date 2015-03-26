@@ -19,13 +19,8 @@
 package org.apache.tinkerpop.gremlin.neo4j.structure;
 
 import org.apache.tinkerpop.gremlin.structure.Direction;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.tinkerpop.api.Neo4jNode;
+import org.neo4j.tinkerpop.api.Neo4jRelationship;
 
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
@@ -35,51 +30,34 @@ public final class Neo4jHelper {
     private Neo4jHelper() {
     }
 
-    public static ExecutionEngine getCypher(final Neo4jGraph graph) {
-        return graph.cypher;
-    }
-
-    public static org.neo4j.graphdb.Direction mapDirection(final Direction direction) {
+    public static org.neo4j.tinkerpop.api.Neo4jDirection mapDirection(final Direction direction) {
         if (direction.equals(Direction.OUT))
-            return org.neo4j.graphdb.Direction.OUTGOING;
+            return org.neo4j.tinkerpop.api.Neo4jDirection.OUTGOING;
         else if (direction.equals(Direction.IN))
-            return org.neo4j.graphdb.Direction.INCOMING;
+            return org.neo4j.tinkerpop.api.Neo4jDirection.INCOMING;
         else
-            return org.neo4j.graphdb.Direction.BOTH;
+            return org.neo4j.tinkerpop.api.Neo4jDirection.BOTH;
     }
 
-    public static RelationshipType[] mapEdgeLabels(final String... edgeLabels) {
-        final RelationshipType[] relationshipTypes = new RelationshipType[edgeLabels.length];
-        for (int i = 0; i < relationshipTypes.length; i++) {
-            relationshipTypes[i] = DynamicRelationshipType.withName(edgeLabels[i]);
-        }
-        return relationshipTypes;
-    }
-
-    public static boolean isDeleted(final Node node) {
+    public static boolean isDeleted(final Neo4jNode node) {
         try {
-            node.getPropertyKeys();
+            node.getKeys();
             return false;
         } catch (final IllegalStateException e) {
             return true;
         }
     }
 
-    public static boolean isDeleted(final Relationship relationship) {
+    public static boolean isDeleted(final Neo4jRelationship relationship) {
         try {
-            relationship.getType();
+            relationship.type();
             return false;
         } catch (final IllegalStateException e) {
             return true;
         }
     }
 
-    public static Label[] makeLabels(final String potentialMultiLabel) {
-        final String[] splitLabels = potentialMultiLabel.split(Neo4jVertex.LABEL_DELIMINATOR);
-        final Label[] labels = new Label[splitLabels.length];
-        for (int i = 0; i < splitLabels.length; i++) {
-            labels[i] = DynamicLabel.label(splitLabels[i]);
-        }
-        return labels;
+    public static boolean isNotFound(RuntimeException ex) {
+        return ex.getClass().getSimpleName().equals("NotFoundException");
     }
 }

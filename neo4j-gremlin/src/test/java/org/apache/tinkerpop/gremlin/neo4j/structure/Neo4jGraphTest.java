@@ -29,18 +29,7 @@ import org.apache.tinkerpop.gremlin.structure.VertexProperty;
 import org.apache.tinkerpop.gremlin.util.StreamFactory;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
 import org.junit.Test;
-import org.neo4j.cypher.javacompat.ExecutionEngine;
-import org.neo4j.graphdb.ConstraintViolationException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.graphdb.index.AutoIndexer;
-import org.neo4j.graphdb.schema.ConstraintDefinition;
-import org.neo4j.graphdb.schema.Schema;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.tinkerpop.api.*;
 
 import javax.script.Bindings;
 import javax.script.ScriptException;
@@ -80,15 +69,15 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
      */
     @Test
     public void shouldTraverseWithoutLabels() {
-        final GraphDatabaseService service = graph.getBaseGraph();
+        final Neo4jGraphAPI service = graph.getBaseGraph();
 
-        final Transaction tx = service.beginTx();
-        final Node n = service.createNode();
+        final Neo4jTx tx = service.tx();
+        final Neo4jNode n = service.createNode();
         tx.success();
         tx.close();
 
-        final Transaction tx2 = service.beginTx();
-        assertEquals(0, IteratorUtils.count(n.getLabels().iterator()));
+        final Neo4jTx tx2 = service.tx();
+        assertEquals(0, IteratorUtils.count(n.labels().iterator()));
         assertEquals(1, IteratorUtils.count(graph.vertices()));
         graph.tx().close();
         tx2.close();
@@ -97,8 +86,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldReturnResultsLabeledIndexOnVertexWithHasHas() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)", null);
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -110,8 +98,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldEnsureColonedKeyIsTreatedAsNormalKey() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)", null);
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -124,8 +111,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldReturnResultsUsingLabeledIndexOnVertexWithHasHasHas() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)", null);
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko", "color", "blue");
         this.graph.addVertex(T.label, "Person", "name", "marko", "color", "green");
@@ -147,8 +133,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldReturnResultsUsingLabeledIndexOnVertexWithColonFails() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)", null);
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -160,8 +145,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldReturnResultsUsingLegacyIndexOnVertex() {
         graph.tx().readWrite();
-        final AutoIndexer<Node> nodeAutoIndexer = this.graph.getBaseGraph().index().getNodeAutoIndexer();
-        nodeAutoIndexer.startAutoIndexingProperty("name");
+        this.graph.getBaseGraph().autoIndexProperties(true,"name");
         this.graph.tx().commit();
 
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -174,8 +158,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldUseLegacyIndexOnEdge() {
         graph.tx().readWrite();
-        final AutoIndexer<Relationship> relAutoIndexer = this.graph.getBaseGraph().index().getRelationshipAutoIndexer();
-        relAutoIndexer.startAutoIndexingProperty("weight");
+        this.graph.getBaseGraph().autoIndexProperties(true, "weight");
         this.graph.tx().commit();
 
         Vertex marko = this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -190,8 +173,8 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldEnforceUniqueConstraint() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.constraintFor(DynamicLabel.label("Person")).assertPropertyIsUnique("name").create();
+        this.graph.getBaseGraph().execute("CREATE CONSTRAINT ON (p:Person) assert p.name is unique",null);
+        this.graph.tx().commit();
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
         this.graph.tx().commit();
@@ -201,9 +184,8 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldEnforceMultipleUniqueConstraint() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.constraintFor(DynamicLabel.label("Person")).assertPropertyIsUnique("name").create();
-        schema.constraintFor(DynamicLabel.label("Person")).assertPropertyIsUnique("surname").create();
+        this.graph.getBaseGraph().execute("CREATE CONSTRAINT ON (p:Person) assert p.name is unique", null);
+        this.graph.getBaseGraph().execute("CREATE CONSTRAINT ON (p:Person) assert p.surname is unique", null);
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
         this.graph.addVertex(T.label, "Person", "surname", "aaaa");
@@ -211,26 +193,29 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
         boolean failSurname = false;
         try {
             this.graph.addVertex(T.label, "Person", "surname", "aaaa");
-        } catch (ConstraintViolationException e) {
-            failSurname = true;
+        } catch (RuntimeException e) {
+            if (isConstraintViolation(e)) failSurname = true;
         }
         assertTrue(failSurname);
         boolean failName = false;
         try {
             this.graph.addVertex(T.label, "Person", "name", "marko");
-        } catch (ConstraintViolationException e) {
-            failName = true;
+        } catch (RuntimeException e) {
+            if (isConstraintViolation(e)) failName = true;
         }
         assertTrue(failName);
         this.graph.tx().commit();
     }
 
+    private boolean isConstraintViolation(RuntimeException e) {
+        return e.getClass().getSimpleName().equals("ConstraintViolationException");
+    }
+
     @Test
     public void shouldDropMultipleUniqueConstraint() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.constraintFor(DynamicLabel.label("Person")).assertPropertyIsUnique("name").create();
-        schema.constraintFor(DynamicLabel.label("Person")).assertPropertyIsUnique("surname").create();
+        this.graph.getBaseGraph().execute("CREATE CONSTRAINT ON (p:Person) assert p.name is unique", null);
+        this.graph.getBaseGraph().execute("CREATE CONSTRAINT ON (p:Person) assert p.surname is unique", null);
         this.graph.tx().commit();
 
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -239,23 +224,22 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
         boolean failSurname = false;
         try {
             this.graph.addVertex(T.label, "Person", "surname", "aaaa");
-        } catch (ConstraintViolationException e) {
-            failSurname = true;
+        } catch (RuntimeException e) {
+            if (isConstraintViolation(e)) failSurname = true;
         }
         assertTrue(failSurname);
         boolean failName = false;
         try {
             this.graph.addVertex(T.label, "Person", "name", "marko");
-        } catch (ConstraintViolationException e) {
-            failName = true;
+        } catch (RuntimeException e) {
+            if (isConstraintViolation(e)) failName = true;
         }
         assertTrue(failName);
         this.graph.tx().commit();
 
         this.graph.tx().readWrite();
-        for (ConstraintDefinition cd : schema.getConstraints(DynamicLabel.label("Person"))) {
-            cd.drop();
-        }
+        this.graph.getBaseGraph().execute("DROP CONSTRAINT ON (p:Person) assert p.name is unique", null);
+        this.graph.getBaseGraph().execute("DROP CONSTRAINT ON (p:Person) assert p.surname is unique",null);
 
         this.graph.tx().commit();
         assertEquals(1, this.g.V().has(T.label, "Person").has("name", "marko").count().next(), 0);
@@ -267,11 +251,10 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
         assertEquals(2, this.g.V().has(T.label, "Person").has("surname", "aaaa").count().next(), 0);
     }
 
-    @Test(expected = ConstraintViolationException.class)
+    @Test(expected = RuntimeException.class)
     public void shouldFailUniqueConstraint() {
         this.graph.tx().readWrite();
-        final Schema schema = this.graph.getBaseGraph().schema();
-        schema.constraintFor(DynamicLabel.label("Person")).assertPropertyIsUnique("name").create();
+        this.graph.getBaseGraph().execute("CREATE CONSTRAINT ON (p:Person) assert p.name is unique", null);
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
         this.graph.tx().commit();
@@ -337,9 +320,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     @Test
     public void shouldDoLabelAndIndexSearch() {
         graph.tx().readWrite();
-
-        final Schema schema = graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)", null);
         this.graph.tx().commit();
 
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -355,11 +336,8 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     public void shouldDoLabelAndLegacyIndexSearch() {
         graph.tx().readWrite();
 
-        final Schema schema = graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
-
-        final AutoIndexer<Node> nodeAutoIndexer = this.graph.getBaseGraph().index().getNodeAutoIndexer();
-        nodeAutoIndexer.startAutoIndexingProperty("name");
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)", null);
+        this.graph.getBaseGraph().autoIndexProperties(true, "name");
 
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -377,9 +355,8 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
         // todo: review this feature check - this test does a lot of stuff - maybe losing some important assertions this way
         if (graph.features().vertex().supportsMultiProperties()) {
             graph.tx().readWrite();
-            final Schema schema = graph.getBaseGraph().schema();
-            schema.indexFor(DynamicLabel.label("person")).on("name").create();
-            schema.indexFor(DynamicLabel.label("name")).on(T.value.getAccessor()).create();
+            this.graph.getBaseGraph().execute("CREATE INDEX ON :person(name)", null);
+//            this.graph.getBaseGraph().execute("CREATE INDEX ON :name(" + T.value.getAccessor() + ")", null);
             this.graph.tx().commit();
 
             final Vertex a = graph.addVertex(T.label, "person", "name", "marko", "age", 34);
@@ -434,10 +411,9 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
     public void shouldDoLabelsNamespaceBehavior() {
         graph.tx().readWrite();
 
-        final Schema schema = graph.getBaseGraph().schema();
-        schema.indexFor(DynamicLabel.label("Person")).on("name").create();
-        schema.indexFor(DynamicLabel.label("Product")).on("name").create();
-        schema.indexFor(DynamicLabel.label("Corporate")).on("name").create();
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Person(name)",null);
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Product(name)",null);
+        this.graph.getBaseGraph().execute("CREATE INDEX ON :Corporate(name)",null);
 
         this.graph.tx().commit();
         this.graph.addVertex(T.label, "Person", "name", "marko");
@@ -466,8 +442,8 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
             assertEquals("rdf-xml", graph.variables().get("namespace").get());
             assertEquals(0, graph.traversal().V().count().next().intValue());
             assertEquals(0, graph.traversal().E().count().next().intValue());
-            assertEquals(0, IteratorUtils.count(GlobalGraphOperations.at(graph.getBaseGraph()).getAllNodes().iterator()));
-            assertEquals(0, IteratorUtils.count(GlobalGraphOperations.at(graph.getBaseGraph()).getAllRelationships().iterator()));
+            assertEquals(0, StreamFactory.stream(graph.getBaseGraph().allNodes()).count());
+            assertEquals(0, StreamFactory.stream(graph.getBaseGraph().allRelationships()).count());
         });
     }
 
@@ -536,7 +512,6 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
         // todo: review this feature check - this test does a lot of stuff - maybe losing some important assertions this way
         if (graph.features().vertex().supportsMultiProperties()) {
             graph.tx().readWrite();
-            ExecutionEngine cypher = Neo4jHelper.getCypher(graph);
             Neo4jVertex a = (Neo4jVertex) graph.addVertex("name", "marko", "name", "okram");
             Neo4jVertex b = (Neo4jVertex) graph.addVertex("name", "stephen", "location", "virginia");
 
@@ -547,32 +522,32 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
                 // assertEquals(1, b.properties("location").count().next().intValue());
                 // assertEquals(0, g.E().count().next().intValue());
 
-                assertEquals(4l, cypher.execute("MATCH n RETURN COUNT(n)").iterator().next().get("COUNT(n)"));
-                assertEquals(2l, cypher.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
-                assertEquals(2l, cypher.execute("MATCH (a)-[r]->() WHERE id(a) = " + a.id() + " RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
+                assertEquals(4l, graph.execute("MATCH n RETURN COUNT(n)",null).next().get("COUNT(n)"));
+                assertEquals(2l, graph.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)",null).next().get("COUNT(r)"));
+                assertEquals(2l, graph.execute("MATCH (a)-[r]->() WHERE id(a) = " + a.id() + " RETURN COUNT(r)",null).next().get("COUNT(r)"));
                 final AtomicInteger counter = new AtomicInteger(0);
-                a.getBaseVertex().getRelationships(Direction.OUTGOING).forEach(relationship -> {
-                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), relationship.getType().name());
+                a.getBaseVertex().relationships(Neo4jDirection.OUTGOING).forEach(relationship -> {
+                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), relationship.type());
                     counter.incrementAndGet();
                 });
                 assertEquals(2, counter.getAndSet(0));
-                cypher.execute("MATCH (a)-[]->(m) WHERE id(a) = " + a.id() + " RETURN labels(m)").forEach(results -> {
+                graph.execute("MATCH (a)-[]->(m) WHERE id(a) = " + a.id() + " RETURN labels(m)",null).forEachRemaining(results -> {
                     assertEquals(VertexProperty.DEFAULT_LABEL, ((List<String>) results.get("labels(m)")).get(0));
                     counter.incrementAndGet();
                 });
                 assertEquals(2, counter.getAndSet(0));
-                StreamFactory.stream(a.getBaseVertex().getRelationships(Direction.OUTGOING)).map(Relationship::getEndNode).forEach(node -> {
-                    assertEquals(2, StreamFactory.stream(node.getPropertyKeys()).count());
+                StreamFactory.stream(a.getBaseVertex().relationships(Neo4jDirection.OUTGOING)).map(Neo4jRelationship::end).forEach(node -> {
+                    assertEquals(2, StreamFactory.stream(node.getKeys()).count());
                     assertEquals("name", node.getProperty(T.key.getAccessor()));
                     assertTrue("marko".equals(node.getProperty(T.value.getAccessor())) || "okram".equals(node.getProperty(T.value.getAccessor())));
-                    assertEquals(0, node.getDegree(Direction.OUTGOING));
-                    assertEquals(1, node.getDegree(Direction.INCOMING));
-                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), node.getRelationships(Direction.INCOMING).iterator().next().getType().name());
+                    assertEquals(0, node.degree(Neo4jDirection.OUTGOING,null));
+                    assertEquals(1, node.degree(Neo4jDirection.INCOMING,null));
+                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), node.relationships(Neo4jDirection.INCOMING).iterator().next().type());
                     counter.incrementAndGet();
                 });
                 assertEquals(2, counter.getAndSet(0));
 
-                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getKeys()).count());
                 assertEquals("stephen", b.getBaseVertex().getProperty("name"));
                 assertEquals("virginia", b.getBaseVertex().getProperty("location"));
             });
@@ -585,12 +560,12 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
                 // assertEquals(1, b.properties("location").count().next().intValue());
                 //  assertEquals(0, g.E().count().next().intValue());
 
-                assertEquals(2l, cypher.execute("MATCH n RETURN COUNT(n)").iterator().next().get("COUNT(n)"));
-                assertEquals(0l, cypher.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
+                assertEquals(2l, graph.execute("MATCH n RETURN COUNT(n)",null).next().get("COUNT(n)"));
+                assertEquals(0l, graph.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)",null).next().get("COUNT(r)"));
 
-                assertEquals(1, StreamFactory.stream(a.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(1, StreamFactory.stream(a.getBaseVertex().getKeys()).count());
                 assertEquals("the marko", a.getBaseVertex().getProperty("name"));
-                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getKeys()).count());
                 assertEquals("stephen", b.getBaseVertex().getProperty("name"));
                 assertEquals("virginia", b.getBaseVertex().getProperty("location"));
             });
@@ -601,10 +576,10 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
                 //    assertEquals(0, a.properties().count().next().intValue());
                 //   assertEquals(2, b.properties().count().next().intValue());
                 //     assertEquals(0, g.E().count().next().intValue());
-                assertEquals(2l, cypher.execute("MATCH n RETURN COUNT(n)").iterator().next().get("COUNT(n)"));
-                assertEquals(0l, cypher.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
-                assertEquals(0, StreamFactory.stream(a.getBaseVertex().getPropertyKeys()).count());
-                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(2l, graph.execute("MATCH n RETURN COUNT(n)",null).next().get("COUNT(n)"));
+                assertEquals(0l, graph.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)",null).next().get("COUNT(r)"));
+                assertEquals(0, StreamFactory.stream(a.getBaseVertex().getKeys()).count());
+                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getKeys()).count());
             });
 
             graph.tx().commit();
@@ -616,36 +591,36 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
                 // assertEquals(1, b.properties("location").count().next().intValue());
                 //  assertEquals(0, g.E().count().next().intValue());
 
-                assertEquals(3l, cypher.execute("MATCH n RETURN COUNT(n)").iterator().next().get("COUNT(n)"));
-                assertEquals(1l, cypher.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
-                assertEquals(1l, cypher.execute("MATCH (a)-[r]->() WHERE id(a) = " + a.id() + " RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
+                assertEquals(3l, graph.execute("MATCH n RETURN COUNT(n)",null).next().get("COUNT(n)"));
+                assertEquals(1l, graph.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)",null).next().get("COUNT(r)"));
+                assertEquals(1l, graph.execute("MATCH (a)-[r]->() WHERE id(a) = " + a.id() + " RETURN COUNT(r)",null).next().get("COUNT(r)"));
                 final AtomicInteger counter = new AtomicInteger(0);
-                a.getBaseVertex().getRelationships(Direction.OUTGOING).forEach(relationship -> {
-                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), relationship.getType().name());
+                a.getBaseVertex().relationships(Neo4jDirection.OUTGOING).forEach(relationship -> {
+                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), relationship.type());
                     counter.incrementAndGet();
                 });
                 assertEquals(1, counter.getAndSet(0));
-                cypher.execute("MATCH (a)-[]->(m) WHERE id(a) = " + a.id() + " RETURN labels(m)").forEach(results -> {
+                graph.execute("MATCH (a)-[]->(m) WHERE id(a) = " + a.id() + " RETURN labels(m)",null).forEachRemaining(results -> {
                     assertEquals(VertexProperty.DEFAULT_LABEL, ((List<String>) results.get("labels(m)")).get(0));
                     counter.incrementAndGet();
                 });
                 assertEquals(1, counter.getAndSet(0));
-                StreamFactory.stream(a.getBaseVertex().getRelationships(Direction.OUTGOING)).map(Relationship::getEndNode).forEach(node -> {
-                    assertEquals(3, StreamFactory.stream(node.getPropertyKeys()).count());
+                StreamFactory.stream(a.getBaseVertex().relationships(Neo4jDirection.OUTGOING)).map(Neo4jRelationship::end).forEach(node -> {
+                    assertEquals(3, StreamFactory.stream(node.getKeys()).count());
                     assertEquals("name", node.getProperty(T.key.getAccessor()));
                     assertEquals("the marko", node.getProperty(T.value.getAccessor()));
                     assertEquals("private", node.getProperty("acl"));
-                    assertEquals(0, node.getDegree(Direction.OUTGOING));
-                    assertEquals(1, node.getDegree(Direction.INCOMING));
-                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), node.getRelationships(Direction.INCOMING).iterator().next().getType().name());
+                    assertEquals(0, node.degree(Neo4jDirection.OUTGOING,null));
+                    assertEquals(1, node.degree(Neo4jDirection.INCOMING,null));
+                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), node.relationships(Neo4jDirection.INCOMING).iterator().next().type());
                     counter.incrementAndGet();
                 });
                 assertEquals(1, counter.getAndSet(0));
 
-                assertEquals(1, StreamFactory.stream(a.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(1, StreamFactory.stream(a.getBaseVertex().getKeys()).count());
                 assertTrue(a.getBaseVertex().hasProperty("name"));
                 assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_TOKEN, a.getBaseVertex().getProperty("name"));
-                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getKeys()).count());
                 assertEquals("stephen", b.getBaseVertex().getProperty("name"));
                 assertEquals("virginia", b.getBaseVertex().getProperty("location"));
             });
@@ -661,36 +636,36 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
                 // assertEquals(1, b.properties("location").count().next().intValue());
                 // assertEquals(0, g.E().count().next().intValue());
 
-                assertEquals(3l, cypher.execute("MATCH n RETURN COUNT(n)").iterator().next().get("COUNT(n)"));
-                assertEquals(1l, cypher.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
-                assertEquals(1l, cypher.execute("MATCH (a)-[r]->() WHERE id(a) = " + a.id() + " RETURN COUNT(r)").iterator().next().get("COUNT(r)"));
+                assertEquals(3l, graph.execute("MATCH n RETURN COUNT(n)",null).next().get("COUNT(n)"));
+                assertEquals(1l, graph.execute("MATCH (n)-[r]->(m) RETURN COUNT(r)",null).next().get("COUNT(r)"));
+                assertEquals(1l, graph.execute("MATCH (a)-[r]->() WHERE id(a) = " + a.id() + " RETURN COUNT(r)",null).next().get("COUNT(r)"));
                 final AtomicInteger counter = new AtomicInteger(0);
-                a.getBaseVertex().getRelationships(Direction.OUTGOING).forEach(relationship -> {
-                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), relationship.getType().name());
+                a.getBaseVertex().relationships(Neo4jDirection.OUTGOING).forEach(relationship -> {
+                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), relationship.type());
                     counter.incrementAndGet();
                 });
                 assertEquals(1, counter.getAndSet(0));
-                cypher.execute("MATCH (a)-[]->(m) WHERE id(a) = " + a.id() + " RETURN labels(m)").forEach(results -> {
+                graph.execute("MATCH (a)-[]->(m) WHERE id(a) = " + a.id() + " RETURN labels(m)",null).forEachRemaining(results -> {
                     assertEquals(VertexProperty.DEFAULT_LABEL, ((List<String>) results.get("labels(m)")).get(0));
                     counter.incrementAndGet();
                 });
                 assertEquals(1, counter.getAndSet(0));
-                StreamFactory.stream(a.getBaseVertex().getRelationships(Direction.OUTGOING)).map(Relationship::getEndNode).forEach(node -> {
-                    assertEquals(3, StreamFactory.stream(node.getPropertyKeys()).count());
+                StreamFactory.stream(a.getBaseVertex().relationships(Neo4jDirection.OUTGOING)).map(Neo4jRelationship::end).forEach(node -> {
+                    assertEquals(3, StreamFactory.stream(node.getKeys()).count());
                     assertEquals("name", node.getProperty(T.key.getAccessor()));
                     assertEquals("the marko", node.getProperty(T.value.getAccessor()));
                     assertEquals("private", node.getProperty("acl"));
-                    assertEquals(0, node.getDegree(Direction.OUTGOING));
-                    assertEquals(1, node.getDegree(Direction.INCOMING));
-                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), node.getRelationships(Direction.INCOMING).iterator().next().getType().name());
+                    assertEquals(0, node.degree(Neo4jDirection.OUTGOING,null));
+                    assertEquals(1, node.degree(Neo4jDirection.INCOMING,null));
+                    assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat("name"), node.relationships(Neo4jDirection.INCOMING).iterator().next().type());
                     counter.incrementAndGet();
                 });
                 assertEquals(1, counter.getAndSet(0));
 
-                assertEquals(1, StreamFactory.stream(a.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(1, StreamFactory.stream(a.getBaseVertex().getKeys()).count());
                 assertTrue(a.getBaseVertex().hasProperty("name"));
                 assertEquals(Neo4jVertexProperty.VERTEX_PROPERTY_TOKEN, a.getBaseVertex().getProperty("name"));
-                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getPropertyKeys()).count());
+                assertEquals(2, StreamFactory.stream(b.getBaseVertex().getKeys()).count());
                 assertEquals("stephen", b.getBaseVertex().getProperty("name"));
                 assertEquals("virginia", b.getBaseVertex().getProperty("location"));
             });
@@ -705,7 +680,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
             assertEquals(2, vertex.labels().size());
             assertTrue(vertex.labels().contains("person"));
             assertTrue(vertex.labels().contains("animal"));
-            assertEquals(2, IteratorUtils.count(vertex.getBaseVertex().getLabels().iterator()));
+            assertEquals(2, IteratorUtils.count(vertex.getBaseVertex().labels().iterator()));
         });
 
         vertex.addLabel("organism");
@@ -715,7 +690,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
             assertTrue(vertex.labels().contains("person"));
             assertTrue(vertex.labels().contains("animal"));
             assertTrue(vertex.labels().contains("organism"));
-            assertEquals(3, IteratorUtils.count(vertex.getBaseVertex().getLabels().iterator()));
+            assertEquals(3, IteratorUtils.count(vertex.getBaseVertex().labels().iterator()));
         });
 
         vertex.removeLabel("person");
@@ -733,7 +708,7 @@ public class Neo4jGraphTest extends BaseNeo4jGraphTest {
             assertEquals(2, vertex.labels().size());
             assertTrue(vertex.labels().contains("animal"));
             assertTrue(vertex.labels().contains("organism"));
-            assertEquals(2, IteratorUtils.count(vertex.getBaseVertex().getLabels().iterator()));
+            assertEquals(2, IteratorUtils.count(vertex.getBaseVertex().labels().iterator()));
         });
 
     }

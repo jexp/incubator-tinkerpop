@@ -26,17 +26,16 @@ import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.apache.tinkerpop.gremlin.structure.util.wrapped.WrappedEdge;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.tinkerpop.api.Neo4jRelationship;
 
 import java.util.Iterator;
 
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class Neo4jEdge extends Neo4jElement implements Edge, WrappedEdge<Relationship> {
+public class Neo4jEdge extends Neo4jElement implements Edge, WrappedEdge<Neo4jRelationship> {
 
-    public Neo4jEdge(final Relationship relationship, final Neo4jGraph graph) {
+    public Neo4jEdge(final Neo4jRelationship relationship, final Neo4jGraph graph) {
         super(relationship, graph);
     }
 
@@ -46,8 +45,12 @@ public class Neo4jEdge extends Neo4jElement implements Edge, WrappedEdge<Relatio
         this.removed = true;
         this.graph.tx().readWrite();
         try {
-            ((Relationship) this.baseElement).delete();
-        } catch (IllegalStateException | NotFoundException ignored) {
+            ((Neo4jRelationship) this.baseElement).delete();
+        } catch (IllegalStateException ignored) {
+            // NotFoundException happens if the edge is committed
+            // IllegalStateException happens if the edge is still chilling in the tx
+        } catch (RuntimeException e) {
+            if (!Neo4jHelper.isNotFound(e)) throw e;
             // NotFoundException happens if the edge is committed
             // IllegalStateException happens if the edge is still chilling in the tx
         }
@@ -60,12 +63,12 @@ public class Neo4jEdge extends Neo4jElement implements Edge, WrappedEdge<Relatio
     @Override
     public String label() {
         this.graph.tx().readWrite();
-        return this.getBaseEdge().getType().name();
+        return this.getBaseEdge().type();
     }
 
     @Override
-    public Relationship getBaseEdge() {
-        return (Relationship) this.baseElement;
+    public Neo4jRelationship getBaseEdge() {
+        return (Neo4jRelationship) this.baseElement;
     }
 
     @Override
@@ -78,11 +81,11 @@ public class Neo4jEdge extends Neo4jElement implements Edge, WrappedEdge<Relatio
         this.graph.tx().readWrite();
         switch (direction) {
             case OUT:
-                return IteratorUtils.of(new Neo4jVertex(this.getBaseEdge().getStartNode(), this.graph));
+                return IteratorUtils.of(new Neo4jVertex(this.getBaseEdge().start(), this.graph));
             case IN:
-                return IteratorUtils.of(new Neo4jVertex(this.getBaseEdge().getEndNode(), this.graph));
+                return IteratorUtils.of(new Neo4jVertex(this.getBaseEdge().end(), this.graph));
             default:
-                return IteratorUtils.of(new Neo4jVertex(this.getBaseEdge().getStartNode(), this.graph), new Neo4jVertex(this.getBaseEdge().getEndNode(), this.graph));
+                return IteratorUtils.of(new Neo4jVertex(this.getBaseEdge().start(), this.graph), new Neo4jVertex(this.getBaseEdge().end(), this.graph));
         }
     }
 }

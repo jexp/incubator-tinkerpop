@@ -31,12 +31,9 @@ import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.apache.tinkerpop.gremlin.structure.util.wrapped.WrappedVertex;
 import org.apache.tinkerpop.gremlin.util.StreamFactory;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.tinkerpop.api.Neo4jDirection;
+import org.neo4j.tinkerpop.api.Neo4jNode;
+import org.neo4j.tinkerpop.api.Neo4jRelationship;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -48,11 +45,11 @@ import java.util.stream.Stream;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<Node> {
+public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<Neo4jNode> {
 
     protected static final String LABEL_DELIMINATOR = "::";
 
-    public Neo4jVertex(final Node node, final Neo4jGraph graph) {
+    public Neo4jVertex(final Neo4jNode node, final Neo4jGraph graph) {
         super(node, graph);
     }
 
@@ -65,10 +62,13 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
         } else {
             if (existsInNeo4j(key)) {
                 if (this.getBaseVertex().getProperty(key).equals(Neo4jVertexProperty.VERTEX_PROPERTY_TOKEN)) {
-                    if (this.getBaseVertex().getDegree(DynamicRelationshipType.withName(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key)), org.neo4j.graphdb.Direction.OUTGOING) > 1)
+                    if (this.getBaseVertex().degree(Neo4jDirection.OUTGOING, Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key)) > 1)
                         throw Vertex.Exceptions.multiplePropertiesExistForProvidedKey(key);
                     else
-                        return new Neo4jVertexProperty<>(this, this.getBaseVertex().getRelationships(org.neo4j.graphdb.Direction.OUTGOING, DynamicRelationshipType.withName(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key))).iterator().next().getEndNode());
+                        return new Neo4jVertexProperty<>(this, this.getBaseVertex().relationships(
+                                Neo4jDirection.OUTGOING,
+                                Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key))
+                                .iterator().next().end());
                 } else {
                     return new Neo4jVertexProperty<>(this, key, (V) this.getBaseVertex().getProperty(key));
                 }
@@ -100,23 +100,23 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
                 final String prefixedKey = Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key);
                 if (this.getBaseVertex().hasProperty(key)) {
                     if (this.getBaseVertex().getProperty(key).equals(Neo4jVertexProperty.VERTEX_PROPERTY_TOKEN)) {
-                        final Node node = this.graph.getBaseGraph().createNode(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL, DynamicLabel.label(key));
+                        final Neo4jNode node = this.graph.getBaseGraph().createNode(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL, key);
                         node.setProperty(T.key.getAccessor(), key);
                         node.setProperty(T.value.getAccessor(), value);
-                        this.getBaseVertex().createRelationshipTo(node, DynamicRelationshipType.withName(prefixedKey));
+                        this.getBaseVertex().connectTo(node, prefixedKey);
                         final Neo4jVertexProperty<V> property = new Neo4jVertexProperty<>(this, node);
                         ElementHelper.attachProperties(property, keyValues); // TODO: make this inlined
                         return property;
                     } else {
-                        Node node = this.graph.getBaseGraph().createNode(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL, DynamicLabel.label(key));
+                        Neo4jNode node = this.graph.getBaseGraph().createNode(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL, key);
                         node.setProperty(T.key.getAccessor(), key);
                         node.setProperty(T.value.getAccessor(), this.getBaseVertex().removeProperty(key));
-                        this.getBaseVertex().createRelationshipTo(node, DynamicRelationshipType.withName(prefixedKey));
+                        this.getBaseVertex().connectTo(node, prefixedKey);
                         this.getBaseVertex().setProperty(key, Neo4jVertexProperty.VERTEX_PROPERTY_TOKEN);
-                        node = this.graph.getBaseGraph().createNode(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL, DynamicLabel.label(key));
+                        node = this.graph.getBaseGraph().createNode(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL, key);
                         node.setProperty(T.key.getAccessor(), key);
                         node.setProperty(T.value.getAccessor(), value);
-                        this.getBaseVertex().createRelationshipTo(node, DynamicRelationshipType.withName(prefixedKey));
+                        this.getBaseVertex().connectTo(node, prefixedKey);
                         final Neo4jVertexProperty<V> property = new Neo4jVertexProperty<>(this, node);
                         ElementHelper.attachProperties(property, keyValues); // TODO: make this inlined
                         return property;
@@ -139,20 +139,21 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
         this.removed = true;
         this.graph.tx().readWrite();
         try {
-            final Node node = this.getBaseVertex();
-            for (final Relationship relationship : node.getRelationships(org.neo4j.graphdb.Direction.BOTH)) {
-                final Node otherNode = relationship.getOtherNode(node);
+            final Neo4jNode node = this.getBaseVertex();
+            for (final Neo4jRelationship relationship : node.relationships(Neo4jDirection.BOTH)) {
+                final Neo4jNode otherNode = relationship.other(node);
                 if (otherNode.hasLabel(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL)) {
-                    otherNode.getRelationships().forEach(Relationship::delete);
+                    otherNode.relationships(null).forEach(Neo4jRelationship::delete);
                     otherNode.delete(); // meta property node
                 } else
                     relationship.delete();
             }
             node.delete();
-        } catch (final NotFoundException ignored) {
-            // this one happens if the vertex is committed
         } catch (final IllegalStateException ignored) {
             // this one happens if the vertex is still chilling in the tx
+        } catch (final RuntimeException ex) {
+            if (!Neo4jHelper.isNotFound(ex)) throw ex;
+            // this one happens if the vertex is committed
         }
     }
 
@@ -166,16 +167,16 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
             throw Edge.Exceptions.userSuppliedIdsNotSupported();
 
         this.graph.tx().readWrite();
-        final Node node = (Node) this.baseElement;
-        final Neo4jEdge edge = new Neo4jEdge(node.createRelationshipTo(((Neo4jVertex) inVertex).getBaseVertex(),
-                DynamicRelationshipType.withName(label)), this.graph);
+        final Neo4jNode node = (Neo4jNode) this.baseElement;
+        final Neo4jEdge edge = new Neo4jEdge(node.connectTo(((Neo4jVertex) inVertex).getBaseVertex(),
+                label), this.graph);
         ElementHelper.attachProperties(edge, keyValues);
         return edge;
     }
 
     @Override
-    public Node getBaseVertex() {
-        return (Node) this.baseElement;
+    public Neo4jNode getBaseVertex() {
+        return (Neo4jNode) this.baseElement;
     }
 
     @Override
@@ -187,22 +188,18 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
     /////////////// Neo4jVertex Specific Methods for Multi-Label Support ///////////////
     public Set<String> labels() {
         this.graph.tx().readWrite();
-        final Set<String> labels = new TreeSet<>();
-        final Iterator<String> itty = IteratorUtils.map(this.getBaseVertex().getLabels().iterator(), Label::name);
-        while (itty.hasNext()) {
-            labels.add(itty.next());
-        }
+        final Set<String> labels = new TreeSet<>(this.getBaseVertex().labels());
         return Collections.unmodifiableSet(labels);
     }
 
     public void addLabel(final String label) {
         this.graph.tx().readWrite();
-        this.getBaseVertex().addLabel(DynamicLabel.label(label));
+        this.getBaseVertex().addLabel(label);
     }
 
     public void removeLabel(final String label) {
         this.graph.tx().readWrite();
-        this.getBaseVertex().removeLabel(DynamicLabel.label(label));
+        this.getBaseVertex().removeLabel(label);
     }
     //////////////////////////////////////////////////////////////////////////////////////
 
@@ -215,9 +212,9 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
     public Iterator<Vertex> vertices(final Direction direction, final String... edgeLabels) {
         this.graph.tx().readWrite();
         return new Iterator<Vertex>() {
-            final Iterator<Relationship> relationshipIterator = IteratorUtils.filter(0 == edgeLabels.length ?
-                    getBaseVertex().getRelationships(Neo4jHelper.mapDirection(direction)).iterator() :
-                    getBaseVertex().getRelationships(Neo4jHelper.mapDirection(direction), Neo4jHelper.mapEdgeLabels(edgeLabels)).iterator(), r -> !r.getType().name().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX));
+            final Iterator<Neo4jRelationship> relationshipIterator = IteratorUtils.filter(0 == edgeLabels.length ?
+                    getBaseVertex().relationships(Neo4jHelper.mapDirection(direction)).iterator() :
+                    getBaseVertex().relationships(Neo4jHelper.mapDirection(direction), (edgeLabels)).iterator(), r -> !r.type().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX));
 
             @Override
             public boolean hasNext() {
@@ -226,7 +223,7 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
 
             @Override
             public Neo4jVertex next() {
-                return new Neo4jVertex(this.relationshipIterator.next().getOtherNode(getBaseVertex()), graph);
+                return new Neo4jVertex(this.relationshipIterator.next().other(getBaseVertex()), graph);
             }
         };
     }
@@ -235,9 +232,9 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
     public Iterator<Edge> edges(final Direction direction, final String... edgeLabels) {
         this.graph.tx().readWrite();
         return new Iterator<Edge>() {
-            final Iterator<Relationship> relationshipIterator = IteratorUtils.filter(0 == edgeLabels.length ?
-                    getBaseVertex().getRelationships(Neo4jHelper.mapDirection(direction)).iterator() :
-                    getBaseVertex().getRelationships(Neo4jHelper.mapDirection(direction), Neo4jHelper.mapEdgeLabels(edgeLabels)).iterator(), r -> !r.getType().name().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX));
+            final Iterator<Neo4jRelationship> relationshipIterator = IteratorUtils.filter(0 == edgeLabels.length ?
+                    getBaseVertex().relationships(Neo4jHelper.mapDirection(direction)).iterator() :
+                    getBaseVertex().relationships(Neo4jHelper.mapDirection(direction), (edgeLabels)).iterator(), r -> !r.type().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX));
 
             @Override
             public boolean hasNext() {
@@ -254,12 +251,12 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
     @Override
     public <V> Iterator<VertexProperty<V>> properties(final String... propertyKeys) {
         this.graph.tx().readWrite();
-        return StreamFactory.stream(getBaseVertex().getPropertyKeys())
+        return StreamFactory.stream(getBaseVertex().getKeys())
                 .filter(key -> ElementHelper.keyExists(key, propertyKeys))
                 .flatMap(key -> {
                     if (getBaseVertex().getProperty(key).equals(Neo4jVertexProperty.VERTEX_PROPERTY_TOKEN))
-                        return StreamFactory.stream(getBaseVertex().getRelationships(org.neo4j.graphdb.Direction.OUTGOING, DynamicRelationshipType.withName(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key))))
-                                .map(relationship -> (VertexProperty<V>) new Neo4jVertexProperty(Neo4jVertex.this, relationship.getEndNode()));
+                        return StreamFactory.stream(getBaseVertex().relationships(Neo4jDirection.OUTGOING, (Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX.concat(key))))
+                                .map(relationship -> (VertexProperty<V>) new Neo4jVertexProperty(Neo4jVertex.this, relationship.end()));
                     else
                         return Stream.of(new Neo4jVertexProperty<>(Neo4jVertex.this, key, (V) this.getBaseVertex().getProperty(key)));
                 }).iterator();
@@ -268,9 +265,14 @@ public class Neo4jVertex extends Neo4jElement implements Vertex, WrappedVertex<N
     private boolean existsInNeo4j(final String key) {
         try {
             return this.getBaseVertex().hasProperty(key);
-        } catch (IllegalStateException | NotFoundException ex) {
+        } catch (IllegalStateException ex) {
             // if vertex is removed before/after transaction close
             throw Element.Exceptions.elementAlreadyRemoved(Vertex.class, this.id());
+        } catch (RuntimeException ex) {
+            // if vertex is removed before/after transaction close
+            if (Neo4jHelper.isNotFound(ex))
+                throw Element.Exceptions.elementAlreadyRemoved(Vertex.class, this.id());
+            throw ex;
         }
     }
 }

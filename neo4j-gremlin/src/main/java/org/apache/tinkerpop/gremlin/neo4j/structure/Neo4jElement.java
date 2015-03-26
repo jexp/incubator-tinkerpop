@@ -24,9 +24,7 @@ import org.apache.tinkerpop.gremlin.structure.Property;
 import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 import org.apache.tinkerpop.gremlin.structure.util.wrapped.WrappedElement;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.PropertyContainer;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.tinkerpop.api.Neo4jEntity;
 
 import java.util.Iterator;
 import java.util.Set;
@@ -34,12 +32,12 @@ import java.util.Set;
 /**
  * @author Stephen Mallette (http://stephen.genoprime.com)
  */
-public abstract class Neo4jElement implements Element, WrappedElement<PropertyContainer> {
+public abstract class Neo4jElement implements Element, WrappedElement<Neo4jEntity> {
     protected final Neo4jGraph graph;
-    protected final PropertyContainer baseElement;
+    protected final Neo4jEntity baseElement;
     protected boolean removed = false;
 
-    public Neo4jElement(final PropertyContainer baseElement, final Neo4jGraph graph) {
+    public Neo4jElement(final Neo4jEntity baseElement, final Neo4jGraph graph) {
         this.baseElement = baseElement;
         this.graph = graph;
     }
@@ -52,7 +50,7 @@ public abstract class Neo4jElement implements Element, WrappedElement<PropertyCo
     @Override
     public Object id() {
         this.graph.tx().readWrite();
-        return this.baseElement instanceof Node ? ((Node) this.baseElement).getId() : ((Relationship) this.baseElement).getId();
+        return this.baseElement.getId();
     }
 
     @Override
@@ -98,14 +96,18 @@ public abstract class Neo4jElement implements Element, WrappedElement<PropertyCo
     }
 
     @Override
-    public PropertyContainer getBaseElement() {
+    public Neo4jEntity getBaseElement() {
         return this.baseElement;
     }
 
     @Override
     public <V> Iterator<? extends Property<V>> properties(final String... propertyKeys) {
         this.graph.tx().readWrite();
-        return IteratorUtils.map(IteratorUtils.filter(this.baseElement.getPropertyKeys().iterator(), key -> ElementHelper.keyExists(key, propertyKeys)), key -> new Neo4jProperty<>(this, key, (V) this.baseElement.getProperty(key)));
+        Iterable<String> keys = this.baseElement.getKeys();
+        Iterator<String> filter = IteratorUtils.filter(keys.iterator(),
+                key -> ElementHelper.keyExists(key, propertyKeys));
+        return IteratorUtils.map(filter,
+                key -> new Neo4jProperty<>(this, key, (V) this.baseElement.getProperty(key)));
     }
 
 }

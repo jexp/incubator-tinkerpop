@@ -21,9 +21,7 @@ package org.apache.tinkerpop.gremlin.neo4j.structure;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.util.GraphVariableHelper;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
-import org.neo4j.graphdb.PropertyContainer;
-import org.neo4j.kernel.GraphDatabaseAPI;
-import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.tinkerpop.api.Neo4jGraphAPI;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -34,19 +32,19 @@ import java.util.Set;
  */
 public class Neo4jGraphVariables implements Graph.Variables {
 
-    private final PropertyContainer graphVariables;
     private final Neo4jGraph graph;
+    private final Neo4jGraphAPI baseGraph;
 
     protected Neo4jGraphVariables(final Neo4jGraph graph) {
         this.graph = graph;
-        this.graphVariables = ((GraphDatabaseAPI) this.graph.getBaseGraph()).getDependencyResolver().resolveDependency(NodeManager.class).getGraphProperties();
+        baseGraph = graph.getBaseGraph();
     }
 
     @Override
     public Set<String> keys() {
         this.graph.tx().readWrite();
         final Set<String> keys = new HashSet<>();
-        for (final String key : this.graphVariables.getPropertyKeys()) {
+        for (final String key : this.baseGraph.getKeys()) {
             if (!Graph.Hidden.isHidden(key))
                 keys.add(key);
         }
@@ -56,8 +54,8 @@ public class Neo4jGraphVariables implements Graph.Variables {
     @Override
     public <R> Optional<R> get(final String key) {
         this.graph.tx().readWrite();
-        return this.graphVariables.hasProperty(key) ?
-                Optional.of((R) this.graphVariables.getProperty(key)) :
+        return this.baseGraph.hasProperty(key) ?
+                Optional.of((R) this.baseGraph.getProperty(key)) :
                 Optional.<R>empty();
     }
 
@@ -66,7 +64,7 @@ public class Neo4jGraphVariables implements Graph.Variables {
         GraphVariableHelper.validateVariable(key, value);
         this.graph.tx().readWrite();
         try {
-            this.graphVariables.setProperty(key, value);
+            this.baseGraph.setProperty(key, value);
         } catch (final IllegalArgumentException e) {
             throw Graph.Variables.Exceptions.dataTypeOfVariableValueNotSupported(value);
         }
@@ -75,8 +73,8 @@ public class Neo4jGraphVariables implements Graph.Variables {
     @Override
     public void remove(final String key) {
         this.graph.tx().readWrite();
-        if (this.graphVariables.hasProperty(key))
-            this.graphVariables.removeProperty(key);
+        if (this.baseGraph.hasProperty(key))
+            this.baseGraph.removeProperty(key);
     }
 
     @Override

@@ -34,10 +34,16 @@ public class DefaultNeo4jGraphProvider extends AbstractNeo4jGraphProvider {
     public Map<String, Object> getBaseConfiguration(final String graphName, final Class<?> test, final String testMethodName) {
         return new HashMap<String, Object>() {{
             put(Graph.GRAPH, Neo4jGraph.class.getName());
-            put(Neo4jGraph.CONFIG_DIRECTORY, getWorkingDirectory() + File.separator + TestHelper.cleanPathSegment(graphName) + File.separator + TestHelper.cleanPathSegment(testMethodName));
+            String directory = getWorkingDirectory() + File.separator + TestHelper.cleanPathSegment(graphName) + File.separator + cleanParameters(TestHelper.cleanPathSegment(testMethodName));
+            put(Neo4jGraph.CONFIG_DIRECTORY, directory);
             put(Neo4jGraph.CONFIG_META_PROPERTIES, true);
             put(Neo4jGraph.CONFIG_MULTI_PROPERTIES, true);
             put(Neo4jGraph.CONFIG_CHECK_ELEMENTS_IN_TRANSACTION, true);
         }};
+    }
+
+    private String cleanParameters(String methodName) {
+        int random = (int)(Math.random()*Integer.MAX_VALUE);
+        return methodName.replaceAll("[0-9, -]+$",String.valueOf(random));
     }
 }

@@ -28,13 +28,9 @@ import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 import org.apache.tinkerpop.gremlin.structure.util.StringFactory;
 import org.apache.tinkerpop.gremlin.structure.util.wrapped.WrappedVertex;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.DynamicRelationshipType;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.NotFoundException;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.tinkerpop.api.Neo4jDirection;
+import org.neo4j.tinkerpop.api.Neo4jNode;
+import org.neo4j.tinkerpop.api.Neo4jRelationship;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -45,14 +41,14 @@ import java.util.Set;
 /**
  * @author Marko A. Rodriguez (http://markorodriguez.com)
  */
-public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<Node> {
+public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<Neo4jNode> {
 
-    public static final Label VERTEX_PROPERTY_LABEL = DynamicLabel.label("vertexProperty");
+    public static final String VERTEX_PROPERTY_LABEL = "vertexProperty";
     public static final String VERTEX_PROPERTY_PREFIX = Graph.Hidden.hide("");
     public static final String VERTEX_PROPERTY_TOKEN = Graph.Hidden.hide("vertexProperty");
 
 
-    private Node node;
+    private Neo4jNode node;
     private final Neo4jVertex vertex;
     private final String key;
     private final V value;
@@ -65,7 +61,7 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
         this.node = null;
     }
 
-    public Neo4jVertexProperty(final Neo4jVertex vertex, final Node node) {
+    public Neo4jVertexProperty(final Neo4jVertex vertex, final Neo4jNode node) {
         this.vertex = vertex;
         this.node = node;
         this.key = (String) node.getProperty(T.key.getAccessor());
@@ -94,7 +90,7 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
     }
 
     @Override
-    public Node getBaseVertex() {
+    public Neo4jNode getBaseVertex() {
         return this.node;
     }
 
@@ -109,11 +105,11 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
             this.node.setProperty(key, value);
             return new Neo4jProperty<>(this, key, value);
         } else {
-            this.node = this.vertex.graph.getBaseGraph().createNode(VERTEX_PROPERTY_LABEL, DynamicLabel.label(this.label()));
+            this.node = this.vertex.graph.getBaseGraph().createNode(VERTEX_PROPERTY_LABEL, this.label());
             this.node.setProperty(T.key.getAccessor(), this.key);
             this.node.setProperty(T.value.getAccessor(), this.value);
             this.node.setProperty(key, value);
-            this.vertex.getBaseVertex().createRelationshipTo(this.node, DynamicRelationshipType.withName(VERTEX_PROPERTY_PREFIX.concat(this.key)));
+            this.vertex.getBaseVertex().connectTo(this.node, VERTEX_PROPERTY_PREFIX.concat(this.key));
             this.vertex.getBaseVertex().setProperty(this.key, VERTEX_PROPERTY_TOKEN);
             return new Neo4jProperty<>(this, key, value);
         }
@@ -130,8 +126,12 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
                 return new Neo4jProperty<>(this, key, (U) this.node.getProperty(key));
             else
                 return Property.empty();
-        } catch (IllegalStateException | NotFoundException ex) {
+        } catch (IllegalStateException ex) {
             throw Element.Exceptions.elementAlreadyRemoved(this.getClass(), this.id());
+        } catch (RuntimeException ex) {
+            if (Neo4jHelper.isNotFound(ex))
+                throw Element.Exceptions.elementAlreadyRemoved(this.getClass(), this.id());
+            throw ex;
         }
     }
 
@@ -153,7 +153,7 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
         if (isNode()) {
             this.vertex.graph.tx().readWrite();
             final Set<String> keys = new HashSet<>();
-            for (final String key : this.node.getPropertyKeys()) {
+            for (final String key : this.node.getKeys()) {
                 if (!Graph.Hidden.isHidden(key))
                     keys.add(key);
             }
@@ -176,14 +176,14 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
                 this.vertex.getBaseVertex().removeProperty(this.key);
         } else {
             if (isNode()) {
-                this.node.getRelationships().forEach(Relationship::delete);
+                this.node.relationships(null).forEach(Neo4jRelationship::delete);
                 this.node.delete();
-                if (this.vertex.getBaseVertex().getDegree(DynamicRelationshipType.withName(VERTEX_PROPERTY_PREFIX.concat(this.key)), Direction.OUTGOING) == 0) {
+                if (this.vertex.getBaseVertex().degree(Neo4jDirection.OUTGOING, VERTEX_PROPERTY_PREFIX.concat(this.key)) == 0) {
                     if (this.vertex.getBaseVertex().hasProperty(this.key))
                         this.vertex.getBaseVertex().removeProperty(this.key);
                 }
             } else {
-                if (this.vertex.getBaseVertex().getDegree(DynamicRelationshipType.withName(VERTEX_PROPERTY_PREFIX.concat(this.key)), Direction.OUTGOING) == 0) {
+                if (this.vertex.getBaseVertex().degree(Neo4jDirection.OUTGOING, VERTEX_PROPERTY_PREFIX.concat(this.key)) == 0) {
                     if (this.vertex.getBaseVertex().hasProperty(this.key))
                         this.vertex.getBaseVertex().removeProperty(this.key);
                 }
@@ -205,7 +205,7 @@ public class Neo4jVertexProperty<V> implements VertexProperty<V>, WrappedVertex<
         if (!isNode()) return Collections.emptyIterator();
         else {
             this.vertex.graph().tx().readWrite();
-            return IteratorUtils.map(IteratorUtils.filter(this.node.getPropertyKeys().iterator(), key -> !key.equals(T.key.getAccessor()) && !key.equals(T.value.getAccessor()) && ElementHelper.keyExists(key, propertyKeys)), key -> (Property<U>) new Neo4jProperty<>(Neo4jVertexProperty.this, key, (V) this.node.getProperty(key)));
+            return IteratorUtils.map(IteratorUtils.filter(this.node.getKeys().iterator(), key -> !key.equals(T.key.getAccessor()) && !key.equals(T.value.getAccessor()) && ElementHelper.keyExists(key, propertyKeys)), key -> (Property<U>) new Neo4jProperty<>(Neo4jVertexProperty.this, key, (V) this.node.getProperty(key)));
         }
     }
 }

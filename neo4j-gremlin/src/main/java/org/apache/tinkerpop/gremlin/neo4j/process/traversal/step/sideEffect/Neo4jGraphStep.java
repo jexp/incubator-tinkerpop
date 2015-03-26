@@ -36,13 +36,9 @@ import org.apache.tinkerpop.gremlin.structure.util.ElementHelper;
 import org.apache.tinkerpop.gremlin.util.StreamFactory;
 import org.apache.tinkerpop.gremlin.util.iterator.IteratorUtils;
 import org.javatuples.Pair;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.DynamicLabel;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.index.AutoIndexer;
-import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.tooling.GlobalGraphOperations;
+import org.neo4j.tinkerpop.api.Neo4jDirection;
+import org.neo4j.tinkerpop.api.Neo4jGraphAPI;
+import org.neo4j.tinkerpop.api.Neo4jNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -110,15 +106,15 @@ public class Neo4jGraphStep<S extends Element> extends GraphStep<S> {
     private Stream<Neo4jVertex> getVerticesUsingLabelAndProperty(final String label, final HasContainer hasContainer) {
         //System.out.println("labelProperty: " + label + ":" + hasContainer);
         final Neo4jGraph graph = (Neo4jGraph) this.getTraversal().getGraph().get();
-        final ResourceIterator<Node> iterator1 = graph.getBaseGraph().findNodesByLabelAndProperty(DynamicLabel.label(label), hasContainer.key, hasContainer.value).iterator();
-        final ResourceIterator<Node> iterator2 = graph.getBaseGraph().findNodesByLabelAndProperty(DynamicLabel.label(hasContainer.key), T.value.getAccessor(), hasContainer.value).iterator();
+        final Iterable<Neo4jNode> iterator1 = graph.getBaseGraph().findNodes(label, hasContainer.key, hasContainer.value);
+        final Iterable<Neo4jNode> iterator2 = graph.getBaseGraph().findNodes(hasContainer.key, T.value.getAccessor(), hasContainer.value);
         final Stream<Neo4jVertex> stream1 = StreamFactory.stream(iterator1)
                 .filter(node -> ElementHelper.idExists(node.getId(), this.ids))
                 .map(node -> new Neo4jVertex(node, graph));
         final Stream<Neo4jVertex> stream2 = StreamFactory.stream(iterator2)
                 .filter(node -> ElementHelper.idExists(node.getId(), this.ids))
                 .filter(node -> node.getProperty(T.key.getAccessor()).equals(hasContainer.key))
-                .map(node -> node.getRelationships(Direction.INCOMING).iterator().next().getStartNode())
+                .map(node -> node.relationships(Neo4jDirection.INCOMING).iterator().next().start())
                 .map(node -> new Neo4jVertex(node, graph));
         return Stream.concat(stream1, stream2);
     }
@@ -127,8 +123,8 @@ public class Neo4jGraphStep<S extends Element> extends GraphStep<S> {
         //System.out.println("labels: " + labels);
         final Neo4jGraph graph = (Neo4jGraph) this.getTraversal().getGraph().get();
         return labels.stream()
-                .filter(label -> !label.equals(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL.name()))
-                .flatMap(label -> StreamFactory.stream(GlobalGraphOperations.at(graph.getBaseGraph()).getAllNodesWithLabel(DynamicLabel.label(label)).iterator()))
+                .filter(label -> !label.equals(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL))
+                .flatMap(label -> StreamFactory.stream(graph.getBaseGraph().findNodes(label)))
                 .filter(node -> !node.hasLabel(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL))
                 .filter(node -> ElementHelper.idExists(node.getId(), this.ids))
                 .map(node -> new Neo4jVertex(node, graph));
@@ -137,9 +133,9 @@ public class Neo4jGraphStep<S extends Element> extends GraphStep<S> {
     private Stream<Neo4jVertex> getVerticesUsingAutomaticIndex(final HasContainer hasContainer) {
         //System.out.println("automatic index: " + hasContainer);
         final Neo4jGraph graph = (Neo4jGraph) this.getTraversal().getGraph().get();
-        return StreamFactory.stream(graph.getBaseGraph().index().getNodeAutoIndexer().getAutoIndex().get(hasContainer.key, hasContainer.value).iterator())
+        return StreamFactory.stream(graph.getBaseGraph().findNodes(hasContainer.key, hasContainer.value).iterator())
                 .map(node -> node.hasLabel(Neo4jVertexProperty.VERTEX_PROPERTY_LABEL) ?
-                        node.getRelationships(Direction.INCOMING).iterator().next().getStartNode() :
+                        node.relationships(Neo4jDirection.INCOMING).iterator().next().start() :
                         node)
                 .filter(node -> ElementHelper.idExists(node.getId(), this.ids))
                 .map(node -> new Neo4jVertex(node, graph));
@@ -147,25 +143,20 @@ public class Neo4jGraphStep<S extends Element> extends GraphStep<S> {
 
     private Stream<Neo4jEdge> getEdgesUsingAutomaticIndex(final HasContainer hasContainer) {
         final Neo4jGraph graph = (Neo4jGraph) this.getTraversal().getGraph().get();
-        return StreamFactory.stream(graph.getBaseGraph().index().getRelationshipAutoIndexer().getAutoIndex().get(hasContainer.key, hasContainer.value).iterator())
+        return StreamFactory.stream(graph.getBaseGraph().findRelationships(hasContainer.key, hasContainer.value).iterator())
                 .filter(relationship -> ElementHelper.idExists(relationship.getId(), this.ids))
-                .filter(relationship -> !relationship.getType().name().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX))
+                .filter(relationship -> !relationship.type().startsWith(Neo4jVertexProperty.VERTEX_PROPERTY_PREFIX))
                 .map(relationship -> new Neo4jEdge(relationship, graph));
     }
 
     private Pair<String, HasContainer> getHasContainerForLabelIndex() {
         final Neo4jGraph graph = (Neo4jGraph) this.getTraversal().getGraph().get();
+        Neo4jGraphAPI baseGraph = graph.getBaseGraph();
         for (final HasContainer hasContainer : this.hasContainers) {
             if (hasContainer.key.equals(T.label.getAccessor()) && hasContainer.predicate.equals(Compare.eq)) {
-                for (final IndexDefinition index : graph.getBaseGraph().schema().getIndexes(DynamicLabel.label((String) hasContainer.value))) {
-                    for (final HasContainer hasContainer1 : this.hasContainers) {
-                        if (!hasContainer1.key.equals(T.label.getAccessor()) && hasContainer1.predicate.equals(Compare.eq)) {
-                            for (final String key : index.getPropertyKeys()) {
-                                if (key.equals(hasContainer1.key))
-                                    return Pair.with((String) hasContainer.value, hasContainer1);
-                            }
-                        }
-                    }
+                if (baseGraph.hasSchemaIndex(
+                        (String) hasContainer.value, hasContainer.key)) {
+                    return Pair.with((String) hasContainer.value, hasContainer);
                 }
             }
         }
@@ -184,16 +175,13 @@ public class Neo4jGraphStep<S extends Element> extends GraphStep<S> {
 
     private HasContainer getHasContainerForAutomaticIndex(final Class<? extends Element> elementClass) {
         final Neo4jGraph graph = (Neo4jGraph) this.getTraversal().getGraph().get();
-        final AutoIndexer<?> indexer = elementClass.equals(Vertex.class) ?
-                graph.getBaseGraph().index().getNodeAutoIndexer() :
-                graph.getBaseGraph().index().getRelationshipAutoIndexer();
-
-        if (!indexer.isEnabled())
-            return null;
-        final Set<String> indexKeys = indexer.getAutoIndexedProperties();
+        Neo4jGraphAPI baseGraph = graph.getBaseGraph();
+        boolean isNode = elementClass.equals(Vertex.class);
         for (final HasContainer hasContainer : this.hasContainers) {
-            if (hasContainer.predicate.equals(Compare.eq) && indexKeys.contains(hasContainer.key))
+            if (hasContainer.predicate.equals(Compare.eq) &&
+                baseGraph.hasAutoIndex(isNode, hasContainer.key)) {
                 return hasContainer;
+            }
         }
         return null;
     }
